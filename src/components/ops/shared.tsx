@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AlertTriangle, Check, Copy, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, Loader2, RotateCw, X } from "lucide-react";
 import { api } from "@/lib/client";
 import type { OpsSection } from "@/lib/opsTypes";
 import { Skeleton } from "@/components/ui/empty";
@@ -79,45 +79,42 @@ export const fmtNum = (n: number) => (n >= 10_000 ? `${(n / 1000).toFixed(n >= 1
 // ---------------------------------------------------------------- primitives
 
 export type Tone = "ok" | "warn" | "err" | "muted" | "accent";
-const TONE_CLS: Record<Tone, string> = {
-  ok: "bg-ok/15 text-ok",
-  warn: "bg-warn/15 text-warn",
-  err: "bg-err/15 text-err",
-  muted: "bg-elev text-muted",
-  accent: "bg-accent/15 text-accent",
-};
 export const TONE_VAR: Record<Tone, string> = { ok: "var(--ok)", warn: "var(--warn)", err: "var(--err)", muted: "var(--fg-faint)", accent: "var(--accent)" };
 
-export function Pill({ tone, children, title }: { tone: Tone; children: ReactNode; title?: string }) {
+/** Status word on the design-system `pill` class (muted = neutral). */
+export function Pill({ tone, children, title, className = "" }: { tone: Tone; children: ReactNode; title?: string; className?: string }) {
   return (
-    <span title={title} className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-medium ${TONE_CLS[tone]}`}>
+    <span title={title} className={`pill shrink-0 ${tone === "muted" ? "" : `pill-${tone}`} ${className}`}>
       {children}
     </span>
   );
 }
 
 export function Dot({ tone, label }: { tone: Tone; label: string }) {
-  return <span role="img" aria-label={label} title={label} className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: TONE_VAR[tone] }} />;
+  return <span role="img" aria-label={label} title={label} className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TONE_VAR[tone] }} />;
 }
 
-/** Calm card shell; when `onClick` is set the whole card is a button. */
-export function Card({ title, icon, action, children, onClick, className = "" }: { title?: ReactNode; icon?: ReactNode; action?: ReactNode; children: ReactNode; onClick?: () => void; className?: string }) {
+/**
+ * Flat `card` (radius 6) with an optional `card-head`; when `onClick` is set the whole card is a button.
+ * `flush` drops the body padding (tables / row lists that run edge to edge).
+ */
+export function Card({ title, icon, action, children, onClick, className = "", flush }: { title?: ReactNode; icon?: ReactNode; action?: ReactNode; children: ReactNode; onClick?: () => void; className?: string; flush?: boolean }) {
   const body = (
     <>
       {(title || action) && (
-        <header className="mb-2.5 flex items-center gap-2">
-          {icon && <span className="text-muted">{icon}</span>}
+        <header className="card-head">
+          {icon && <span className="flex shrink-0 text-muted" aria-hidden>{icon}</span>}
           <h3 className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</h3>
-          {action}
+          {action && <span className="flex shrink-0 items-center gap-1.5 font-normal">{action}</span>}
         </header>
       )}
-      {children}
+      <div className={flush ? "min-w-0" : "card-body min-w-0"}>{children}</div>
     </>
   );
-  const cls = `min-w-0 rounded-xl border border-line bg-elev/30 p-3.5 text-left ${className}`;
+  const cls = `card min-w-0 text-left ${className}`;
   if (onClick)
     return (
-      <button type="button" onClick={onClick} className={`${cls} block w-full transition-colors hover:border-faint/60 hover:bg-elev/50`}>
+      <button type="button" onClick={onClick} className={`${cls} flex h-full w-full flex-col items-stretch justify-start transition-colors hover:border-[color-mix(in_srgb,var(--fg-faint)_55%,var(--border))]`}>
         {body}
       </button>
     );
@@ -127,8 +124,8 @@ export function Card({ title, icon, action, children, onClick, className = "" }:
 export function Stat({ label, value, sub, tone }: { label: string; value: ReactNode; sub?: ReactNode; tone?: Tone }) {
   return (
     <div className="min-w-0">
-      <div className="text-[11px] text-muted">{label}</div>
-      <div className="truncate text-[17px] font-semibold tabular-nums" style={tone ? { color: TONE_VAR[tone] } : undefined}>
+      <div className="truncate text-[11px] text-muted">{label}</div>
+      <div className="truncate text-[15px] font-semibold tabular-nums" style={tone ? { color: TONE_VAR[tone] } : undefined}>
         {value}
       </div>
       {sub && <div className="truncate text-[11px] text-faint">{sub}</div>}
@@ -141,8 +138,8 @@ export function Meter({ value, warn = 75, err = 90, label }: { value: number; wa
   const v = Math.max(0, Math.min(100, value));
   const tone: Tone = v >= err ? "err" : v >= warn ? "warn" : "ok";
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-elev" role="meter" aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
-      <div className="h-full rounded-full" style={{ width: `${v}%`, background: TONE_VAR[tone] }} />
+    <div className="h-1.5 w-full overflow-hidden rounded-[2px] bg-hover" role="meter" aria-valuenow={Math.round(v)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+      <div className="h-full rounded-[2px]" style={{ width: `${v}%`, background: TONE_VAR[tone] }} />
     </div>
   );
 }
@@ -165,7 +162,7 @@ export function Bars({ values, height = 72, color = "var(--accent)", label, high
 
 /** Latency sparkline with red ticks for failed checks. */
 export function Sparkline({ points, height = 26, label }: { points: { ok: boolean; v: number | null }[]; height?: number; label: string }) {
-  if (!points.length) return <div className="h-[26px] text-[11px] leading-[26px] text-faint">no checks yet</div>;
+  if (!points.length) return <div className="h-[26px] text-[11px] leading-[26px] text-faint">No checks yet</div>;
   const vals = points.map((p) => p.v ?? 0);
   const max = Math.max(1, ...vals);
   const n = points.length;
@@ -185,13 +182,13 @@ export function StackBar({ parts, label }: { parts: { label: string; value: numb
   const total = parts.reduce((a, p) => a + p.value, 0);
   return (
     <div>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-elev" role="img" aria-label={`${label}: ${parts.map((p) => `${p.label} ${p.value}`).join(", ")}`}>
+      <div className="flex h-2 w-full overflow-hidden rounded-[2px] bg-hover" role="img" aria-label={`${label}: ${parts.map((p) => `${p.label} ${p.value}`).join(", ")}`}>
         {total > 0 && parts.map((p) => (p.value ? <div key={p.label} style={{ width: `${(p.value / total) * 100}%`, background: p.color }} /> : null))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px]">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
         {parts.map((p) => (
           <span key={p.label} className="flex items-center gap-1.5 text-muted">
-            <span className="h-2 w-2 rounded-sm" style={{ background: p.color }} />
+            <span className="h-2 w-2 rounded-[2px]" style={{ background: p.color }} />
             {p.label} <b className="tabular-nums text-fg">{fmtNum(p.value)}</b>
             <span className="tabular-nums text-faint">{total ? `${Math.round((p.value / total) * 100)}%` : ""}</span>
           </span>
@@ -203,13 +200,13 @@ export function StackBar({ parts, label }: { parts: { label: string; value: numb
 
 /** Ranked list with proportional background bars. */
 export function RankList({ rows, empty = "Nothing yet", mono, max = 10 }: { rows: { key: string; label: ReactNode; count: number; hint?: ReactNode }[]; empty?: string; mono?: boolean; max?: number }) {
-  if (!rows.length) return <p className="py-2 text-[12px] text-faint">{empty}</p>;
+  if (!rows.length) return <p className="py-1 text-[12px] text-faint">{empty}</p>;
   const top = Math.max(1, ...rows.map((r) => r.count));
   return (
-    <ul className="space-y-1">
+    <ul className="space-y-px">
       {rows.slice(0, max).map((r) => (
-        <li key={r.key} className="relative flex items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-[12px]">
-          <span className="absolute inset-y-0 left-0 rounded-md bg-accent/10" style={{ width: `${(r.count / top) * 100}%` }} aria-hidden />
+        <li key={r.key} className="relative flex h-6 items-center gap-2 overflow-hidden rounded-[4px] px-2 text-[12px]">
+          <span className="absolute inset-y-0 left-0 rounded-[4px] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)]" style={{ width: `${(r.count / top) * 100}%` }} aria-hidden />
           <span className={`relative min-w-0 flex-1 truncate ${mono ? "font-mono text-[11.5px]" : ""}`}>{r.label}</span>
           {r.hint && <span className="relative shrink-0">{r.hint}</span>}
           <span className="relative shrink-0 tabular-nums text-muted">{fmtNum(r.count)}</span>
@@ -219,36 +216,127 @@ export function RankList({ rows, empty = "Nothing yet", mono, max = 10 }: { rows
   );
 }
 
-/** Simple responsive table. */
+/** Data table on the design-system `tbl` class; scrolls horizontally instead of squeezing. */
 export function Table({ head, children, label }: { head: ReactNode[]; children: ReactNode; label: string }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
-      <table className="w-full min-w-[520px] border-collapse text-[12px]" aria-label={label}>
+    <div className="min-w-0 overflow-x-auto">
+      <table className="tbl min-w-[520px] [&_tbody_tr:last-child_td]:border-b-0" aria-label={label}>
         <thead>
-          <tr className="border-b border-line bg-elev/50 text-left text-[11px] font-medium text-muted">
+          <tr>
             {head.map((h, i) => (
-              <th key={i} scope="col" className="whitespace-nowrap px-2.5 py-1.5 font-medium">
+              <th key={i} scope="col">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="[&>tr]:border-b [&>tr]:border-line/60 [&>tr:last-child]:border-0 [&_td]:px-2.5 [&_td]:py-1.5 [&_td]:align-middle">{children}</tbody>
+        <tbody>{children}</tbody>
       </table>
     </div>
   );
 }
 
-export function ErrorBox({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+// ---------------------------------------------------------------- tool errors
+
+/**
+ * Raw CLI / network errors (docker, podman, kubectl, ssh, gh, fetch) → one plain sentence that says
+ * what happened and what to do. Backticks mark commands. UI-only mapping; the raw text stays available.
+ */
+const TOOL_ERRORS: [RegExp, string][] = [
+  [/cannot connect to podman/i, "Podman isn't running. Start it with `podman machine start`."],
+  [/cannot connect to the docker daemon|is the docker daemon running|docker desktop is (not running|stopped)/i, "Docker isn't running. Start Docker Desktop, OrbStack or Colima, then refresh."],
+  [/permission denied.*docker\.sock|docker\.sock.*permission denied/i, "This user can't reach Docker. Add it to the docker group with `sudo usermod -aG docker $USER`."],
+  [/docker isn't installed/i, "Docker isn't installed on this Mac. Install Docker Desktop, OrbStack, Colima or Podman."],
+  [/kubectl isn't installed/i, "kubectl isn't installed. Install it with `brew install kubectl`."],
+  [/no kubernetes context|current-context is not set/i, "No Kubernetes cluster is set up. Point kubectl at one in `~/.kube/config`."],
+  [/you must be logged in to the server/i, "kubectl isn't signed in to this cluster. Refresh the cluster credentials, then retry."],
+  [/unable to connect to the server|the connection to the server .* was refused|cluster unreachable/i, "The cluster isn't reachable. Make sure it's running and the current context is right."],
+  [/permission denied \(publickey/i, "The server rejected your SSH key. Load it with `ssh-add`, or set an identity file on the server."],
+  [/host key verification failed/i, "The server's host key isn't trusted yet. Connect once with `ssh user@host` in the terminal and accept it."],
+  [/remote host identification has changed/i, "The server's host key changed. If that's expected, remove the old one with `ssh-keygen -R <host>`."],
+  [/could not resolve hostname|name or service not known|nodename nor servname|enotfound|getaddrinfo/i, "The host name can't be resolved. Check the address."],
+  [/timed out|etimedout/i, "No response before the timeout. Check the address, port and firewall."],
+  [/connection refused|econnrefused/i, "The connection was refused. Check that the service is running on that port."],
+  [/gh auth login|not logged in(to)? (to )?any github hosts/i, "GitHub CLI isn't signed in. Run `gh auth login`."],
+  [/gh: command not found|executable file not found.*\bgh\b/i, "GitHub CLI isn't installed. Run `brew install gh`."],
+  [/certificate|cert_|ssl/i, "The TLS certificate isn't valid. Check the site's certificate."],
+];
+
+export function friendlyError(raw: string | null | undefined, fallback = "Something went wrong."): { text: string; raw: string | null } {
+  const r = (raw ?? "").trim();
+  if (!r) return { text: fallback, raw: null };
+  for (const [re, text] of TOOL_ERRORS) if (re.test(r)) return { text, raw: r };
+  const first = r.replace(/^error:\s*/i, "").split(/\n|(?<=\.)\s/)[0].trim();
+  const text = first.length > 160 ? `${first.slice(0, 157)}…` : first;
+  return { text: /[.!?…]$/.test(text) ? text : `${text}.`, raw: text.replace(/[.…]$/, "") === r.replace(/[.]$/, "") ? null : r };
+}
+
+/** Renders `code` spans inside a friendly sentence. */
+export function Sentence({ text }: { text: string }) {
+  const parts = text.split(/(`[^`]+`)/g);
   return (
-    <div role="alert" className="rounded-xl border border-err/40 bg-err/10 p-3.5 text-[12.5px]">
+    <>
+      {parts.map((p, i) =>
+        p.startsWith("`") && p.endsWith("`") ? (
+          <code key={i} className="whitespace-nowrap rounded-[3px] bg-hover px-1 font-mono text-[11.5px] text-fg">
+            {p.slice(1, -1)}
+          </code>
+        ) : (
+          p
+        ),
+      )}
+    </>
+  );
+}
+
+/** Collapsed raw tool output under a friendly message. */
+export function RawDetail({ raw }: { raw: string | null }) {
+  if (!raw) return null;
+  return (
+    <details className="mt-1.5 text-[11.5px]">
+      <summary className="w-fit text-faint hover:text-fg">Details</summary>
+      <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-[4px] bg-editor p-2 font-mono text-[11px] leading-relaxed text-muted">{raw}</pre>
+    </details>
+  );
+}
+
+const BOX_TONE = {
+  err: { box: "border-[color-mix(in_srgb,var(--err)_40%,var(--border))] bg-[color-mix(in_srgb,var(--err)_7%,var(--bg-side))]", icon: "text-err" },
+  warn: { box: "border-[color-mix(in_srgb,var(--warn)_40%,var(--border))] bg-[color-mix(in_srgb,var(--warn)_6%,var(--bg-side))]", icon: "text-warn" },
+  muted: { box: "border-line bg-side", icon: "text-muted" },
+} as const;
+
+/**
+ * Inline problem box. Pass `error` (raw tool text) to get the friendly sentence + collapsed details,
+ * or `children` for custom content. `onRetry` adds a Retry button.
+ */
+export function ErrorBox({ title, children, action, error, onRetry, tone = "err" }: { title: string; children?: ReactNode; action?: ReactNode; error?: string | null; onRetry?: () => void; tone?: keyof typeof BOX_TONE }) {
+  const f = error !== undefined ? friendlyError(error) : null;
+  const t = BOX_TONE[tone];
+  return (
+    <div role={tone === "err" ? "alert" : "status"} className={`rounded-[6px] border px-3 py-2.5 text-[12.5px] ${t.box}`}>
       <div className="flex items-start gap-2">
-        <AlertTriangle size={15} className="mt-0.5 shrink-0 text-err" />
+        <AlertTriangle size={14} className={`mt-px shrink-0 ${t.icon}`} aria-hidden />
         <div className="min-w-0 flex-1">
-          <div className="font-medium text-err">{title}</div>
-          {children && <div className="mt-1 break-words text-muted">{children}</div>}
+          <div className="text-[13px] font-medium text-fg">{title}</div>
+          {f && (
+            <p className="mt-0.5 break-words text-[12px] text-muted" title={f.raw ?? undefined}>
+              <Sentence text={f.text} />
+            </p>
+          )}
+          {children && <div className="mt-0.5 break-words text-[12px] text-muted">{children}</div>}
+          {f && <RawDetail raw={f.raw} />}
         </div>
-        {action}
+        {(action || onRetry) && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            {action}
+            {onRetry && (
+              <button type="button" className="btn btn-sm" onClick={onRetry}>
+                <RotateCw size={12} aria-hidden /> Retry
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -256,9 +344,9 @@ export function ErrorBox({ title, children, action }: { title: string; children?
 
 export function LoadingGrid({ n = 4, h = "h-32" }: { n?: number; h?: string }) {
   return (
-    <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2" aria-busy="true" aria-label="Loading">
       {Array.from({ length: n }, (_, i) => (
-        <Skeleton key={i} className={`${h} !rounded-xl`} />
+        <Skeleton key={i} className={`${h} !rounded-[6px]`} />
       ))}
     </div>
   );
@@ -268,29 +356,37 @@ export function Spinner({ size = 12 }: { size?: number }) {
   return <Loader2 size={size} className="animate-spin" aria-hidden />;
 }
 
-export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+/** Copy-to-clipboard button; `iconOnly` renders an `icon-btn` (label becomes aria-label/title). */
+export function CopyButton({ text, label = "Copy", iconOnly }: { text: string; label?: string; iconOnly?: boolean }) {
   const [done, setDone] = useState(false);
+  const copy = () => {
+    void navigator.clipboard?.writeText(text).then(() => {
+      setDone(true);
+      setTimeout(() => setDone(false), 1500);
+    });
+  };
+  if (iconOnly)
+    return (
+      <button type="button" className="icon-btn" onClick={copy} aria-label={done ? "Copied" : label} title={done ? "Copied" : label}>
+        {done ? <Check size={13} className="text-ok" /> : <Copy size={13} />}
+      </button>
+    );
   return (
-    <button
-      type="button"
-      className="btn h-7"
-      onClick={() => {
-        void navigator.clipboard?.writeText(text).then(() => {
-          setDone(true);
-          setTimeout(() => setDone(false), 1500);
-        });
-      }}
-    >
+    <button type="button" className="btn btn-sm" onClick={copy}>
       {done ? <Check size={12} /> : <Copy size={12} />} {done ? "Copied" : label}
     </button>
   );
 }
 
-export function SectionHead({ title, children }: { title: string; children?: ReactNode }) {
+/** Section header inside a view: 15px title, optional one-line description, actions right. */
+export function SectionHead({ title, description, children }: { title: string; description?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="mb-2 flex flex-wrap items-center gap-2">
-      <h2 className="section-title min-w-0 flex-1">{title}</h2>
-      {children}
+    <div className="mb-3 flex flex-wrap items-start gap-x-3 gap-y-2">
+      <div className="min-w-0 flex-1">
+        <h2 className="section-h">{title}</h2>
+        {description && <p className="mt-0.5 text-[12px] text-muted">{description}</p>}
+      </div>
+      {children && <div className="flex shrink-0 flex-wrap items-center gap-1.5">{children}</div>}
     </div>
   );
 }
@@ -330,28 +426,32 @@ export function LogsDrawer({ title, load, onClose }: { title: string; load: () =
     if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight;
   }, [text]);
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className="flex h-full w-full max-w-[860px] flex-col border-l border-line bg-editor shadow-2xl">
-        <header className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-          <h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold">{title}</h2>
-          <button className="btn h-7" onClick={() => void fetchLogs()}>
-            Reload
+    <div className="fixed inset-0 z-50 flex justify-end bg-[color-mix(in_srgb,var(--bg)_55%,transparent)]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={title} className="flex h-full w-full max-w-[860px] flex-col border-l border-line bg-editor" style={{ boxShadow: "var(--pop-shadow)" }}>
+        <header className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+          <h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={title}>
+            {title}
+          </h2>
+          <button className="btn btn-sm" onClick={() => void fetchLogs()}>
+            <RotateCw size={12} aria-hidden /> Reload
           </button>
           {text && <CopyButton text={text} />}
-          <button ref={closeRef} className="icon-btn" onClick={onClose} aria-label="Close logs">
+          <button ref={closeRef} className="icon-btn" onClick={onClose} aria-label="Close logs" title="Close (Esc)">
             <X size={14} />
           </button>
         </header>
         {error ? (
-          <div className="p-4">
-            <ErrorBox title="Couldn't load logs">{error}</ErrorBox>
+          <div className="p-3">
+            <ErrorBox title="Couldn't load logs" error={error} onRetry={() => void fetchLogs()} />
           </div>
         ) : text === null ? (
-          <div className="flex items-center gap-2 p-4 text-[12px] text-muted">
-            <Spinner /> Loading logs…
+          <div className="space-y-1.5 p-3" aria-busy="true" aria-label="Loading logs">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-3.5" />
+            ))}
           </div>
         ) : (
-          <pre ref={preRef} className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all p-4 font-mono text-[11.5px] leading-relaxed text-fg">
+          <pre ref={preRef} className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all p-3 font-mono text-[11.5px] leading-relaxed text-fg">
             {text.trim() || "(no output)"}
           </pre>
         )}

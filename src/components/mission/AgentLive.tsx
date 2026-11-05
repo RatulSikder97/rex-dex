@@ -78,10 +78,11 @@ export default function AgentLive() {
   if (term && state?.terminalAlive) {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex h-8 shrink-0 items-center gap-2 border-b border-line px-3 text-[11.5px] text-muted">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ok" />
+        <div className="flex h-8 shrink-0 items-center gap-2 border-b border-line px-3 text-[12px] text-muted">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ok" aria-hidden />
           <DeptIcon name={dept.icon} color={dept.color} size={12} />
-          <span className="text-fg">{dept.name}</span>· {agents.label(state.session?.agent ?? agentId)} · live session (synced with chat)
+          <span className="text-fg">{dept.name}</span>
+          <span className="min-w-0 truncate">· {agents.label(state.session?.agent ?? agentId)} · live session, synced with the chat</span>
           <div className="flex-1" />
           <button className="icon-btn" title="End terminal session" aria-label="End terminal session" onClick={() => void stop()}>
             <X size={13} />
@@ -96,18 +97,16 @@ export default function AgentLive() {
 
   const interactive = !!agent?.interactive && !!agent.available;
   return (
-    <div className="rx-fade flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-      <div className="rx-mark flex h-12 w-12 items-center justify-center rounded-2xl">
-        <SquareTerminal size={22} />
-      </div>
-      <div className="text-[15px] font-semibold tracking-tight">Watch {dept.name} work live</div>
+    <div className="rx-fade flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+      <SquareTerminal size={28} strokeWidth={1.4} className="text-faint" aria-hidden />
+      <div className="text-[15px] font-semibold">Watch {dept.name} work live</div>
       <p className="max-w-sm text-[12.5px] leading-relaxed text-muted">
-        Opens this conversation in {agents.label(agentId)}&apos;s own terminal. Same session as the chat: what you type in either shows up in both.
+        Opens this task in {agents.label(agentId)}&apos;s own terminal. Same session as the chat: what you type in either shows up in both.
       </p>
-      <button className="rx-primary rx-press mt-1 h-8 rounded-lg px-3 text-[12px]" disabled={!agentThread.threadId || !interactive || starting} onClick={() => void start()}>
+      <button type="button" className="btn btn-primary mt-2" disabled={!agentThread.threadId || !interactive || starting} onClick={() => void start()}>
         <SquareTerminal size={13} /> {starting ? "Starting…" : `Open ${agents.label(agentId)} live`}
       </button>
-      {!interactive && agent && <p className="text-[11.5px] text-warn">{agent.available ? `${agent.label} has no interactive mode` : `${agent.label} isn't installed`}</p>}
+      {!interactive && agent && <p className="text-[12px] text-warn">{agent.available ? `${agent.label} has no interactive mode` : `${agent.label} isn’t installed`}</p>}
     </div>
   );
 }

@@ -137,7 +137,7 @@ export default function SelectHost() {
     <div
       ref={list}
       role="listbox"
-      className="fixed z-[200] overflow-y-auto rounded-lg border border-line bg-elev p-1 text-fg shadow-[0_12px_32px_rgba(0,0,0,.45)]"
+      className="popover fixed z-[200] overflow-y-auto py-1 text-fg"
       style={{ left: open.left, top: open.above ? undefined : open.top, bottom: open.above ? `calc(100% - ${open.top}px)` : undefined, minWidth: open.width, maxWidth: 420, maxHeight: open.maxHeight }}
     >
       {open.options.map((o, i) => {
@@ -145,7 +145,7 @@ export default function SelectHost() {
         lastGroup = o.group;
         return (
           <div key={`${i}:${o.value}`}>
-            {header && <div className="px-2.5 pb-0.5 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-faint">{header}</div>}
+            {header && <div className="section-title flex h-[24px] items-center px-3 !text-faint">{header}</div>}
             <button
               type="button"
               role="option"
@@ -157,10 +157,12 @@ export default function SelectHost() {
                 commit(open.el, o.value);
                 close();
               }}
-              className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] disabled:cursor-not-allowed disabled:opacity-40 ${i === active ? "bg-hover" : ""}`}
+              className={`mx-1 flex h-[24px] w-[calc(100%-8px)] items-center gap-2 rounded-[4px] px-1.5 text-left text-[12.5px] disabled:text-faint ${i === active ? "bg-active" : ""}`}
             >
               <span className="w-3.5 shrink-0">{o.value === open.value && <Check size={13} className="text-accent" />}</span>
-              <span className="truncate">{o.label}</span>
+              <span className="truncate" title={o.label.length > 40 ? o.label : undefined}>
+                {o.label}
+              </span>
             </button>
           </div>
         );

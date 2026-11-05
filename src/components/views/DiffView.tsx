@@ -6,10 +6,11 @@ import { FileCode, RefreshCw } from "lucide-react";
 import { api } from "@/lib/client";
 import { useWorkbench } from "@/store/workbench";
 import { useEditorOptions } from "./editorOptions";
+import { ErrorState, LoadingRows } from "@/components/ui/kit";
 
 const MonacoDiff = dynamic(() => import("@monaco-editor/react").then((m) => m.DiffEditor), {
   ssr: false,
-  loading: () => <div className="p-4 text-muted">Loading diff…</div>,
+  loading: () => <LoadingRows rows={10} height={12} className="p-4" />,
 });
 
 const LANG: Record<string, string> = {
@@ -56,38 +57,40 @@ export default function DiffView({ projectId, path, staged, from }: { projectId:
 
   const name = path.split("/").pop() ?? path;
   const header = (
-    <div className="flex h-8 shrink-0 items-center gap-2 border-b border-line px-3 text-[12px] text-muted">
-      <span className="truncate font-mono">{from ? `${from} → ${path}` : path}</span>
-      <span className="text-faint">{staged ? "HEAD ↔ Index (staged)" : "Index ↔ Working Tree"}</span>
+    <div className="flex h-[30px] shrink-0 items-center gap-2 border-b border-line pl-3 pr-1.5 text-[12px] text-muted" role="toolbar" aria-label="Diff actions">
+      <span className="min-w-0 truncate font-mono" title={from ? `${from} → ${path}` : path}>
+        {from ? `${from} → ${path}` : path}
+      </span>
+      <span className="hidden shrink-0 text-faint @lg:inline">{staged ? "HEAD ↔ index (staged)" : "Index ↔ working tree"}</span>
       <div className="flex-1" />
-      <button className="icon-btn" title="Refresh" onClick={load}>
+      <button className="icon-btn" title="Refresh diff" aria-label="Refresh diff" onClick={load}>
         <RefreshCw size={13} />
       </button>
-      <button className="btn btn-ghost" onClick={() => openTab({ kind: "file", projectId, path }, name)}>
-        <FileCode size={13} /> Open File
+      <button className="btn btn-ghost btn-sm shrink-0" onClick={() => openTab({ kind: "file", projectId, path }, name)}>
+        <FileCode size={13} aria-hidden /> Open file
       </button>
     </div>
   );
 
   if (error)
     return (
-      <div className="flex h-full flex-col">
+      <div className="@container flex h-full flex-col">
         {header}
-        <div className="p-6 text-err">{error}</div>
+        <ErrorState title="Couldn’t load this diff" error={error} onRetry={load} />
       </div>
     );
   if (!v)
     return (
-      <div className="flex h-full flex-col">
+      <div className="@container flex h-full flex-col">
         {header}
-        <div className="p-6 text-muted">Loading…</div>
+        <LoadingRows rows={10} height={12} className="p-4" />
       </div>
     );
   if (v.binary)
     return (
-      <div className="flex h-full flex-col">
+      <div className="@container flex h-full flex-col">
         {header}
-        <div className="p-6 text-muted">Binary file; diff not shown.</div>
+        <div className="p-6 text-[12.5px] text-muted">This is a binary file, so there’s no text diff to show.</div>
       </div>
     );
 
@@ -95,7 +98,7 @@ export default function DiffView({ projectId, path, staged, from }: { projectId:
   const modified = staged ? (v.index ?? "") : (v.working ?? "");
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="@container flex h-full flex-col">
       {header}
       <div className="min-h-0 flex-1">
         <MonacoDiff

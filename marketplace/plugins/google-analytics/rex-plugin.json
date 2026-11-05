@@ -46,7 +46,7 @@
         "auth": "browser-cli",
         "authCommand": "export PATH=\"/opt/homebrew/share/google-cloud-sdk/bin:/usr/local/share/google-cloud-sdk/bin:$HOME/google-cloud-sdk/bin:$PATH\"; command -v gcloud >/dev/null || { echo \"Installing Google Cloud CLI (one time)\u2026\"; brew install --cask google-cloud-sdk; }; gcloud auth application-default login --scopes=openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/webmasters.readonly && node \"${rex:bin}/rex-google-mcp.mjs\" --setup",
         "checkCommand": "node \"${rex:bin}/rex-google-mcp.mjs\" --check",
-        "setupHint": "Click Connect with Google: your browser opens Google's sign-in. Approve, and REX sets up the rest (Cloud project + APIs) automatically. First time only, REX installs the Google Cloud CLI."
+        "setupHint": "Connect opens Google's sign-in in your browser. Approve, and REX sets up the rest automatically (first time only, it also installs Google's command-line tools)."
       }
     ],
     "commands": [

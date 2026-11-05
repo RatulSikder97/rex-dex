@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Download, Save, Sparkles, Square } from "lucide-react";
+import { Code, Download, ImageIcon, Save, Sparkles, Square, Wand2 } from "lucide-react";
 import { api, download, extractSvg, streamRun, svgDataUrl, applyChunk } from "@/lib/client";
 import type { ProviderId, Run } from "@/lib/types";
 import AgentPicker from "@/components/AgentPicker";
@@ -83,91 +83,132 @@ export default function GraphicsView() {
     openTab({ kind: "deliverable", id: d.id }, d.title);
   };
 
+  const stop = () => api(`/api/runs/${runId}/cancel`, { method: "POST" }).catch((e) => log("error", "graphics", String(e)));
+
   return (
-    <div className="flex h-full">
-      <div className="flex w-80 shrink-0 flex-col gap-3 overflow-y-auto border-r border-line p-4">
-        <h1 className="text-[15px] font-semibold">Graphics Studio</h1>
-        <label>
-          <span className="label">Format</span>
-          <select className="input" value={preset.id} onChange={(e) => setPreset(PRESETS.find((p) => p.id === e.target.value)!)}>
-            {PRESETS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label} ({p.w}×{p.h})
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="label">Brief</span>
-          <textarea
-            className="input"
-            rows={7}
-            placeholder={'e.g. "Launch announcement for REX: dark background, bold headline \'Your AI company in one window\', subtle grid, accent #3574f0"'}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
-        </label>
-        <label>
-          <span className="label">Agent</span>
-          <AgentPicker value={provider} onChange={setProvider} department="design" className="input" />
-        </label>
-        <div className="flex gap-2">
-          {runId ? (
-            <button className="btn flex-1 justify-center" onClick={() => api(`/api/runs/${runId}/cancel`, { method: "POST" })}>
-              <Square size={11} /> Stop
-            </button>
-          ) : (
+    <div className="@container flex h-full min-h-0 flex-col bg-editor">
+      <header className="flex min-h-[52px] shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2">
+        <h1 className="page-title shrink-0">Graphics studio</h1>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          {svg && (
             <>
-              <button className="btn btn-primary flex-1 justify-center" onClick={() => generate(false)} disabled={!prompt.trim()}>
-                <Sparkles size={13} /> Generate
-              </button>
-              <button className="btn flex-1 justify-center" onClick={() => generate(true)} disabled={!svg || !prompt.trim()}>
-                Refine
+              <div className="flex items-center" role="group" aria-label="Export">
+                <button className="btn rounded-r-none" onClick={() => exportPng(1)} title={`Download PNG (${preset.w}×${preset.h})`}>
+                  <Download size={13} /> PNG
+                </button>
+                <button className="btn -ml-px rounded-none" onClick={() => exportPng(2)} title={`Download PNG at 2× (${preset.w * 2}×${preset.h * 2})`}>
+                  @2x
+                </button>
+                <button className="btn -ml-px rounded-l-none" onClick={() => download(`${preset.id}.svg`, svg, "image/svg+xml")} title="Download SVG">
+                  SVG
+                </button>
+              </div>
+              <button className="btn" onClick={() => save().catch((e) => log("error", "graphics", `Couldn’t save: ${e instanceof Error ? e.message : e}`))} title="Save to the deliverables library">
+                <Save size={13} /> Save
               </button>
             </>
           )}
         </div>
-        {svg && (
-          <div className="space-y-2 border-t border-line pt-3">
-            <div className="grid grid-cols-2 gap-2">
-              <button className="btn justify-center" onClick={() => exportPng(1)}>
-                <Download size={13} /> PNG
+      </header>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto @3xl:grid-cols-[300px_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:overflow-hidden">
+        <aside aria-label="Brief" className="min-w-0 space-y-3 border-b border-line bg-side px-4 pb-4 pt-3 @3xl:overflow-y-auto @3xl:border-b-0 @3xl:border-r">
+          <h2 className="section-title">Design</h2>
+          <div>
+            <label className="label" htmlFor="gx-format">
+              Format
+            </label>
+            <select id="gx-format" className="input" value={preset.id} onChange={(e) => setPreset(PRESETS.find((p) => p.id === e.target.value)!)}>
+              {PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label} ({p.w}×{p.h})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="gx-brief">
+              Brief
+            </label>
+            <textarea
+              id="gx-brief"
+              className="input"
+              rows={7}
+              placeholder="Launch announcement: dark background, bold headline “Your AI company in one window”, subtle grid…"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+            <p className="help">{svg ? "Describe a change and choose Refine to revise the current graphic." : "Describe the message, layout, colors and text."}</p>
+          </div>
+          <div>
+            <span className="label">Agent</span>
+            <AgentPicker value={provider} onChange={setProvider} department="design" className="input" title="Agent that designs the graphic" />
+          </div>
+          <div className="flex gap-2 pt-1">
+            {runId ? (
+              <button className="btn flex-1" onClick={stop}>
+                <Square size={11} /> Stop
               </button>
-              <button className="btn justify-center" onClick={() => exportPng(2)}>
-                <Download size={13} /> PNG @2x
-              </button>
-              <button className="btn justify-center" onClick={() => download(`${preset.id}.svg`, svg, "image/svg+xml")}>
-                <Download size={13} /> SVG
-              </button>
-              <button className="btn justify-center" onClick={save}>
-                <Save size={13} /> Save
-              </button>
-            </div>
-            <button className="btn w-full justify-center" onClick={() => setShowCode((s) => !s)}>
-              {showCode ? "Hide" : "Edit"} SVG code
+            ) : (
+              <>
+                <button className={`btn flex-1 ${svg ? "" : "btn-primary"}`} onClick={() => generate(false)} disabled={!prompt.trim()} title={prompt.trim() ? "Generate a new graphic" : "Write a brief first"}>
+                  <Sparkles size={13} /> Generate
+                </button>
+                <button className={`btn flex-1 ${svg ? "btn-primary" : ""}`} onClick={() => generate(true)} disabled={!svg || !prompt.trim()} title="Revise the current graphic">
+                  <Wand2 size={13} /> Refine
+                </button>
+              </>
+            )}
+          </div>
+        </aside>
+
+        <section aria-label="Preview" className="flex min-h-[420px] min-w-0 flex-col @3xl:min-h-0">
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-line px-3">
+            <span className="text-[12px] text-muted">{preset.label}</span>
+            <span className="text-[11px] tabular-nums text-faint">
+              {preset.w}×{preset.h}
+            </span>
+            <div className="flex-1" />
+            {runId && <span className="caret text-[12px] text-muted">Designing</span>}
+            <button className="icon-btn" onClick={() => setShowCode((v) => !v)} disabled={!svg} aria-pressed={showCode} aria-label="Edit SVG code" title={showCode ? "Hide SVG code" : "Edit SVG code"}>
+              <Code size={14} />
             </button>
           </div>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 items-center justify-center bg-[repeating-conic-gradient(#8881_0_25%,transparent_0_50%)] bg-[length:20px_20px] p-8">
-          {svg ? (
-            <img alt="Graphic preview" src={svgDataUrl(svg)} className="max-h-full max-w-full shadow-2xl" style={{ aspectRatio: `${preset.w}/${preset.h}` }} />
-          ) : runId ? (
-            <div className="max-w-lg text-center text-muted">
-              <div className="caret">Designing</div>
-              <pre className="mt-3 max-h-60 overflow-hidden text-left font-mono text-[10.5px] text-faint whitespace-pre-wrap">{raw.slice(-1200)}</pre>
-            </div>
-          ) : (
-            <div className="text-center text-muted">
-              <div className="mx-auto mb-3 rounded border border-dashed border-line" style={{ width: 240, height: (240 * preset.h) / preset.w }} />
-              {preset.w}×{preset.h} canvas
-            </div>
+          <div
+            className="flex min-h-0 flex-1 items-center justify-center p-6"
+            style={{
+              backgroundImage: "repeating-conic-gradient(color-mix(in srgb, var(--fg) 6%, transparent) 0 25%, transparent 0 50%)",
+              backgroundSize: "20px 20px",
+            }}
+          >
+            {svg ? (
+              <img alt="Graphic preview" src={svgDataUrl(svg)} className="max-h-full max-w-full border border-line" style={{ aspectRatio: `${preset.w}/${preset.h}` }} />
+            ) : runId ? (
+              <div className="card w-full max-w-lg p-3" aria-live="polite">
+                <div className="caret mb-2 text-[12px] text-muted">Designing</div>
+                <pre className="max-h-60 overflow-hidden whitespace-pre-wrap font-mono text-[11px] text-faint">{raw.slice(-1200) || "Waiting for the agent…"}</pre>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="grid place-items-center rounded-[6px] border border-dashed border-line text-faint" style={{ width: 240, height: Math.min(320, (240 * preset.h) / preset.w) }}>
+                  <ImageIcon size={22} strokeWidth={1.5} aria-hidden />
+                </div>
+                <div className="text-[13px] font-medium">No graphic yet</div>
+                <p className="max-w-[300px] text-[12px] text-muted">Write a brief and choose Generate. The agent returns an editable SVG.</p>
+              </div>
+            )}
+          </div>
+          {showCode && svg && (
+            <textarea
+              aria-label="SVG code"
+              spellCheck={false}
+              className="h-56 shrink-0 resize-y border-t border-line bg-editor p-3 font-mono text-[11.5px]"
+              style={{ outline: "none" }}
+              value={svg}
+              onChange={(e) => setSvg(e.target.value)}
+            />
           )}
-        </div>
-        {showCode && svg && (
-          <textarea className="h-56 shrink-0 resize-y border-t border-line bg-editor p-3 font-mono text-[11.5px] outline-none" value={svg} onChange={(e) => setSvg(e.target.value)} />
-        )}
+        </section>
       </div>
     </div>
   );

@@ -22,10 +22,11 @@ export function Page({ children, className = "", wide }: { children: ReactNode; 
   );
 }
 
-export function PageHeader({ title, description, icon: Icon, meta, actions }: { title: ReactNode; description?: ReactNode; icon?: LucideIcon; meta?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ title, description, icon: Icon, leading, meta, actions }: { title: ReactNode; description?: ReactNode; icon?: LucideIcon; leading?: ReactNode; meta?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="page-head">
-      {Icon && (
+      {leading}
+      {!leading && Icon && (
         <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-[6px] border border-line bg-elev text-muted" aria-hidden>
           <Icon size={15} strokeWidth={1.75} />
         </span>

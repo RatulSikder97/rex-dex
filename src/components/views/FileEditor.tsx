@@ -9,8 +9,9 @@ import { getSetting } from "@/store/settings";
 import { registerEditor } from "@/components/workbench/editorRegistry";
 import { useEditorOptions } from "./editorOptions";
 import { kbd } from "@/components/workbench/shortcuts";
+import { ErrorState, LoadingRows } from "@/components/ui/kit";
 
-const Monaco = dynamic(() => import("@monaco-editor/react").then((m) => m.default), { ssr: false, loading: () => <div className="p-4 text-muted">Loading editor…</div> });
+const Monaco = dynamic(() => import("@monaco-editor/react").then((m) => m.default), { ssr: false, loading: () => <LoadingRows rows={10} height={12} className="p-4" /> });
 
 const LANG: Record<string, string> = {
   ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript", mjs: "javascript", cjs: "javascript", json: "json",
@@ -24,6 +25,8 @@ export default function FileEditor({ tabId, projectId, path }: { tabId: string; 
   const { setTabDirty, log, delegate } = useWorkbench();
   const [content, setContent] = useState<string | null>(null);
   const [binary, setBinary] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const saved = useRef("");
   const current = useRef("");
   const { options, modelOptions } = useEditorOptions();
@@ -32,13 +35,14 @@ export default function FileEditor({ tabId, projectId, path }: { tabId: string; 
   useEffect(() => {
     api<{ content: string; binary: boolean }>(`/api/files?mode=read&projectId=${projectId}&path=${encodeURIComponent(path)}`)
       .then((f) => {
+        setLoadError(null);
         setBinary(f.binary);
         setContent(f.content);
         saved.current = f.content;
         current.current = f.content;
       })
-      .catch((e) => log("error", "editor", String(e)));
-  }, [projectId, path, log]);
+      .catch((e) => setLoadError(e instanceof Error ? e.message : String(e)));
+  }, [projectId, path, attempt]);
 
   const save = useCallback(async () => {
     try {
@@ -88,19 +92,21 @@ export default function FileEditor({ tabId, projectId, path }: { tabId: string; 
     editorRef.current?.getModel()?.updateOptions(modelOptions);
   }, [modelOptions]);
 
-  if (binary) return <div className="p-6 text-muted">Binary or very large file; not shown.</div>;
-  if (content === null) return <div className="p-6 text-muted">Loading…</div>;
+  if (loadError) return <ErrorState title={`Couldn’t open ${path.split("/").pop()}`} error={`${loadError}. Check that the file still exists in the project folder.`} onRetry={() => setAttempt((n) => n + 1)} />;
+  if (binary) return <div className="p-6 text-[12.5px] text-muted">This is a binary or very large file, so it isn’t shown in the editor.</div>;
+  if (content === null) return <LoadingRows rows={10} height={12} className="p-4" />;
 
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const language = path.toLowerCase().endsWith("dockerfile") ? "dockerfile" : (LANG[ext] ?? "plaintext");
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-8 items-center gap-2 border-b border-line px-3 text-[12px] text-muted">
+      <div className="flex h-[30px] shrink-0 items-center gap-1 border-b border-line pl-3 pr-1.5 text-[12px] text-muted" role="toolbar" aria-label="Editor actions">
         <span className="truncate">{LANG_LABEL[language] ?? language}</span>
         <div className="flex-1" />
         <button
-          className="btn btn-ghost"
+          className="btn btn-ghost btn-sm"
+          title="Ask the Engineering department to review this file"
           onClick={() =>
             delegate({
               department: "engineering",
@@ -109,10 +115,10 @@ export default function FileEditor({ tabId, projectId, path }: { tabId: string; 
             })
           }
         >
-          <Bot size={13} /> Ask Engineering
+          <Bot size={13} aria-hidden /> Ask Engineering
         </button>
-        <button className="btn" onClick={save}>
-          <Save size={13} /> Save <span className="kbd">{kbd("⌘S")}</span>
+        <button className="btn btn-sm" onClick={save} title={`Save (${kbd("⌘S")})`}>
+          <Save size={13} aria-hidden /> Save
         </button>
       </div>
       <div className="min-h-0 flex-1">

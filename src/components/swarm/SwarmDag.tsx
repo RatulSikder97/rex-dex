@@ -100,14 +100,13 @@ export default function SwarmDag({ steps, selected, onSelect }: { steps: Step[];
                 strokeDasharray={e.tone === "live" ? "5 5" : e.tone === "idle" ? "3 4" : undefined}
                 markerEnd="url(#swarm-arrow)"
               >
-                {e.tone === "live" && <animate attributeName="stroke-dashoffset" from="0" to="-10" dur="0.8s" repeatCount="indefinite" />}
               </path>
             );
           })}
         </svg>
         {columns.map((col, i) => (
           <div key={i} className="relative z-10 flex w-[224px] shrink-0 flex-col gap-2" aria-label={col[0]?.key === SYNTH_KEY ? "Synthesis" : `Stage ${i + 1}`}>
-            <div className="text-[10.5px] font-semibold uppercase tracking-wider text-faint">{col[0]?.key === SYNTH_KEY ? "Synthesis" : i === 0 ? "Parallel start" : `Stage ${i + 1}`}</div>
+            <div className="section-title">{col[0]?.key === SYNTH_KEY ? "Synthesis" : i === 0 ? "Parallel start" : `Stage ${i + 1}`}</div>
             <div className="flex flex-1 flex-col justify-center gap-3">
               {col.map((s) => (
                 <StepCard
@@ -147,21 +146,20 @@ function StepCard({ step, selected, onSelect, cardRef }: { step: Step; selected:
       onClick={onSelect}
       aria-pressed={selected}
       aria-label={`${step.title}, ${d.name}, ${m.label}`}
-      className={`group relative w-full rounded-xl border bg-elev px-3 py-2.5 text-left transition-[border-color,box-shadow,opacity] ${
-        selected ? "border-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_22%,transparent)]" : "border-line hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))]"
-      } ${faint ? "opacity-55" : ""} ${synth ? "bg-[color-mix(in_srgb,var(--accent)_6%,var(--bg-elev))]" : ""}`}
+      className={`group relative w-full rounded-[6px] border px-2.5 py-2 text-left transition-colors ${
+        selected ? "border-accent bg-active" : step.status === "running" ? "border-accent bg-elev hover:bg-hover" : "border-line bg-elev hover:bg-hover"
+      } ${faint ? "text-muted" : ""}`}
     >
-      {step.status === "running" && <span className="pointer-events-none absolute inset-0 animate-pulse rounded-xl shadow-[inset_0_0_0_1px_var(--accent)]" aria-hidden />}
       <span className="flex items-center gap-1.5 text-[11px] text-muted">
-        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md" style={{ background: `color-mix(in srgb, ${d.color} 16%, transparent)`, color: d.color }}>
+        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[4px]" style={{ background: `color-mix(in srgb, ${d.color} 16%, transparent)`, color: d.color }}>
           {synth ? <Sparkles size={11} /> : <DeptIcon name={d.icon} size={11} />}
         </span>
         <span className="min-w-0 flex-1 truncate">{d.name}</span>
-        <m.icon size={13} style={{ color: m.color }} className={`shrink-0 ${step.status === "running" ? "animate-spin" : ""}`} aria-hidden />
+        <m.icon size={13} style={{ color: m.color }} className={`shrink-0 ${step.status === "running" ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
       </span>
-      <span className={`mt-1.5 line-clamp-2 block text-[12.5px] font-medium leading-snug ${faint ? "line-through decoration-faint" : ""}`}>{step.title}</span>
-      <span className="mt-2 flex items-center gap-1.5 text-[10.5px]">
-        <span className={`min-w-0 truncate rounded-md border px-1.5 leading-[17px] ${auto ? "border-dashed border-line text-faint" : "border-line text-muted"}`} title={auto ? "Department default agent" : "Agent"}>
+      <span className={`mt-1.5 line-clamp-2 block text-[12.5px] font-medium leading-snug ${faint ? "line-through decoration-faint" : ""}`} title={step.title}>{step.title}</span>
+      <span className="mt-2 flex items-center gap-1.5 text-[11px]">
+        <span className={`min-w-0 truncate rounded-[4px] border px-1.5 leading-[16px] ${auto ? "border-dashed border-line text-faint" : "border-line text-muted"}`} title={auto ? "Department default agent" : "Agent"}>
           {agents.label(agent)}
         </span>
         <span className="flex-1" />

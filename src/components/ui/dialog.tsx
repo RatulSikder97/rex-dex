@@ -102,16 +102,22 @@ function DialogView({ d }: { d: Pending }) {
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/40 pt-[18vh]"
+      className="scrim fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[18vh]"
       onMouseDown={cancel}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
+          e.preventDefault();
           e.stopPropagation();
           cancel();
         }
+        // Enter confirms from anywhere in the dialog except a focused Cancel button (it then cancels, natively).
+        if (e.key === "Enter" && !e.nativeEvent.isComposing && !(e.target instanceof HTMLButtonElement)) {
+          e.preventDefault();
+          ok();
+        }
         // Simple focus trap between the dialog's focusable elements.
         if (e.key === "Tab") {
-          const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("button, input"));
+          const els = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), input, textarea, select, [tabindex]:not([tabindex='-1'])"));
           const i = els.indexOf(document.activeElement as HTMLElement);
           const next = e.shiftKey ? (i <= 0 ? els.length - 1 : i - 1) : i === els.length - 1 ? 0 : i + 1;
           e.preventDefault();
@@ -123,16 +129,21 @@ function DialogView({ d }: { d: Pending }) {
         role={d.type === "confirm" ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-[440px] max-w-[92vw] rounded-lg border border-line bg-elev p-4 shadow-2xl"
+        aria-describedby={d.opts.message ? `${titleId}-msg` : undefined}
+        className="popover w-[420px] max-w-full p-4"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
-          {danger && <TriangleAlert size={18} className="mt-0.5 text-warn" aria-hidden />}
+          {danger && <TriangleAlert size={16} className="mt-px shrink-0 text-err" aria-hidden />}
           <div className="min-w-0 flex-1">
-            <h2 id={titleId} className="text-[13.5px] font-semibold">
+            <h2 id={titleId} className="break-words text-[13px] font-semibold leading-snug">
               {d.opts.title}
             </h2>
-            {d.opts.message && <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted">{d.opts.message}</p>}
+            {d.opts.message && (
+              <p id={`${titleId}-msg`} className="mt-1 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-muted">
+                {d.opts.message}
+              </p>
+            )}
           </div>
         </div>
         {d.type === "prompt" && (
@@ -141,11 +152,11 @@ function DialogView({ d }: { d: Pending }) {
             className="input mt-3"
             placeholder={d.opts.placeholder}
             value={value}
+            aria-label={d.opts.title}
             onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && ok()}
           />
         )}
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
           <button className="btn" onClick={cancel}>
             {(d.type === "confirm" && d.opts.cancelLabel) || "Cancel"}
           </button>

@@ -1,24 +1,29 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Blocks, Download, ExternalLink, LogIn, RefreshCw, SquareTerminal, Star } from "lucide-react";
+import { Blocks, Bot, Download, ExternalLink, LogIn, RefreshCw, SquareTerminal, Star } from "lucide-react";
 import { api } from "@/lib/client";
 import type { ProviderStatus } from "@/lib/types";
 import { DeptIcon } from "@/components/icons";
 import { useAgents, useDepartments, useWorkbench } from "@/store/workbench";
+import { ErrorState, LoadingRows, Pill } from "@/components/ui/kit";
+import { EmptyState } from "@/components/ui/empty";
 
 /**
  * Agent-related settings sections (lead-owned; moved verbatim from SettingsView).
  * Section ids settings-agents / settings-departments / settings-registries are scroll anchors for openSettings().
  */
 
-export function Card({ id, title, action, children }: { id: string; title: string; action?: React.ReactNode; children: React.ReactNode }) {
+export function Card({ id, title, description, action, children }: { id: string; title: string; description?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section id={id} className="card scroll-mt-4 space-y-3 p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="section-title">{title}</h2>
+    <section id={id} className="card scroll-mt-4" aria-labelledby={`${id}-h`}>
+      <div className="card-head">
+        <h2 id={`${id}-h`} className="min-w-0 flex-1 truncate">
+          {title}
+        </h2>
         {action}
       </div>
-      {children}
+      {description && <p className="px-3 pt-2.5 text-[12px] leading-relaxed text-muted">{description}</p>}
+      <div className="space-y-3 p-3">{children}</div>
     </section>
   );
 }
@@ -48,20 +53,19 @@ export function AgentsCard() {
   return (
     <Card
       id="settings-agents"
-      title="Agents"
+      title="Installed agents"
+      description="Each agent is a CLI on your machine. REX runs it in the background for department work, and you can open it in the integrated terminal. Install and sign-in run in the terminal with the CLI’s own login."
       action={
-        <button className="btn" onClick={() => void recheck()} disabled={checking}>
-          <RefreshCw size={12} className={checking ? "animate-spin" : ""} /> Re-check
+        <button className="btn btn-sm" onClick={() => void recheck()} disabled={checking} title="Look for installed agents again">
+          <RefreshCw size={12} className={checking ? "animate-spin" : ""} /> {checking ? "Checking…" : "Re-check"}
         </button>
       }
     >
-      <p className="text-[12px] leading-relaxed text-muted">
-        Each agent is a CLI on your machine. REX runs it non-interactively for department work, and you can open it interactively in the integrated terminal. Install and sign in happen in the terminal with the CLI&apos;s own login.
-      </p>
-
-      <div className="flex items-center gap-2">
-        <span className="w-28 text-[12.5px]">Default agent</span>
-        <select className="input w-56" value={prefs.defaultAgent} onChange={(e) => void save({ defaultAgent: e.target.value })} aria-label="Default agent">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <label htmlFor="settings-default-agent" className="text-[13px] font-semibold">
+          Default agent
+        </label>
+        <select id="settings-default-agent" className="input !w-56 max-w-full" value={prefs.defaultAgent} onChange={(e) => void save({ defaultAgent: e.target.value })}>
           {agents.map((a) => (
             <option key={a.id} value={a.id}>
               {a.label}
@@ -69,68 +73,54 @@ export function AgentsCard() {
             </option>
           ))}
         </select>
-        <span className="text-[11.5px] text-faint">used by departments without their own choice</span>
+        <span className="text-[12px] text-muted">Used by departments without their own choice.</span>
       </div>
 
-      <div className="divide-y divide-line rounded-md border border-line">
-        {agents.map((a) => (
-          <div key={a.id} className="flex gap-3 p-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-elev">
-              <DeptIcon name={a.icon} size={18} />
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-medium">{a.label}</span>
-                <span className="rounded bg-elev px-1.5 py-px text-[10.5px] text-muted">{a.builtin ? "built-in" : `extension · ${a.pluginId}`}</span>
-                {prefs.defaultAgent === a.id && (
-                  <span className="flex items-center gap-0.5 text-[10.5px] text-warn">
-                    <Star size={10} /> default
-                  </span>
-                )}
-                <span className={`flex items-center gap-1 text-[11px] ${a.available ? "text-ok" : "text-err"}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${a.available ? "bg-ok" : "bg-err"}`} />
-                  {a.available ? "installed" : "not installed"}
+      {!agents.length ? (
+        <div className="rounded-[6px] border border-line">
+          <EmptyState compact icon={Bot} title="No agents found" hint="Install Claude Code or Codex, then choose Re-check." action={{ label: "Re-check", onClick: () => void recheck() }} />
+        </div>
+      ) : (
+        <ul className="divide-y divide-line overflow-hidden rounded-[6px] border border-line bg-editor" aria-label="Agents">
+          {agents.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+              <div className="flex min-w-[220px] flex-1 items-start gap-2.5">
+                <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded border border-line bg-elev" aria-hidden>
+                  <DeptIcon name={a.icon} size={14} />
                 </span>
-                {a.authError && (
-                  <span className="rounded bg-warn/15 px-1.5 py-px text-[10.5px] text-warn" title={a.authError}>
-                    sign-in expired: other agents cover for it
-                  </span>
-                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[13px] font-semibold">{a.label}</span>
+                    {a.available ? <Pill tone="ok">Installed</Pill> : <Pill tone="err">Not installed</Pill>}
+                    {a.authError && (
+                      <Pill tone="warn" title={a.authError}>
+                        Sign-in expired
+                      </Pill>
+                    )}
+                    {prefs.defaultAgent === a.id && (
+                      <Pill tone="accent" icon={Star}>
+                        Default
+                      </Pill>
+                    )}
+                    <span className="text-[11px] text-faint">{a.builtin ? "Built-in" : `Extension · ${a.pluginId}`}</span>
+                  </div>
+                  <div className="mt-0.5 text-[12px] text-muted">{a.description}</div>
+                  <div className="truncate font-mono text-[11px] text-faint" title={a.detail}>
+                    {a.detail}
+                  </div>
+                  {a.authError && <div className="mt-0.5 text-[11px] text-warn">Other agents run its work until you sign in again.</div>}
+                </div>
               </div>
-              <div className="text-[12px] text-muted">{a.description}</div>
-              <div className="truncate font-mono text-[11px] text-faint" title={a.detail}>
-                {a.detail}
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                {!a.available && a.install && (
-                  <button className="btn btn-primary h-6" onClick={() => launchTerminal({ id: a.id, action: "install" })} title={a.install}>
-                    <Download size={12} /> Install in terminal
-                  </button>
-                )}
-                {a.login && (
-                  <button className={`btn h-6 ${a.authError ? "btn-primary" : ""}`} disabled={!a.available} onClick={() => launchTerminal({ id: a.id, action: "login" })} title={a.login}>
-                    <LogIn size={12} /> Sign in
-                  </button>
-                )}
-                {a.interactive && (
-                  <button className="btn h-6" disabled={!a.available} onClick={() => launchTerminal({ id: a.id, action: "interactive" })}>
-                    <SquareTerminal size={12} /> Open in terminal
-                  </button>
-                )}
-                {prefs.defaultAgent !== a.id && (
-                  <button className="btn h-6" disabled={!a.available} onClick={() => void save({ defaultAgent: a.id })}>
-                    <Star size={12} /> Make default
-                  </button>
-                )}
+              <div className="flex flex-wrap items-center gap-1.5">
                 {a.models.length > 0 && (
                   <select
-                    className="input h-6 w-auto text-[11.5px]"
+                    className="input input-sm !w-auto max-w-[180px]"
                     value={prefs.models[a.id] ?? ""}
                     onChange={(e) => void save({ models: { ...prefs.models, [a.id]: e.target.value } })}
                     aria-label={`${a.label} model`}
                     title="Default model"
                   >
-                    <option value="">default model</option>
+                    <option value="">Default model</option>
                     {a.models.map((m) => (
                       <option key={m} value={m}>
                         {m}
@@ -138,19 +128,39 @@ export function AgentsCard() {
                     ))}
                   </select>
                 )}
+                {!a.available && a.install && (
+                  <button className="btn btn-sm" onClick={() => launchTerminal({ id: a.id, action: "install" })} title={a.install}>
+                    <Download size={12} /> Install
+                  </button>
+                )}
+                {a.login && (
+                  <button className={`btn btn-sm ${a.authError ? "btn-primary" : ""}`} disabled={!a.available} onClick={() => launchTerminal({ id: a.id, action: "login" })} title={a.login}>
+                    <LogIn size={12} /> Sign in
+                  </button>
+                )}
+                {a.interactive && (
+                  <button className="icon-btn" disabled={!a.available} onClick={() => launchTerminal({ id: a.id, action: "interactive" })} aria-label={`Open ${a.label} in terminal`} title="Open in terminal">
+                    <SquareTerminal size={13} />
+                  </button>
+                )}
+                {prefs.defaultAgent !== a.id && (
+                  <button className="icon-btn" disabled={!a.available} onClick={() => void save({ defaultAgent: a.id })} aria-label={`Make ${a.label} the default agent`} title="Make default">
+                    <Star size={13} />
+                  </button>
+                )}
                 {a.homepage && (
-                  <a className="icon-btn" href={a.homepage} target="_blank" rel="noreferrer" title="Docs" aria-label={`${a.label} docs`}>
-                    <ExternalLink size={12} />
+                  <a className="icon-btn" href={a.homepage} target="_blank" rel="noreferrer" title="Open docs" aria-label={`${a.label} docs`}>
+                    <ExternalLink size={13} />
                   </a>
                 )}
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <button className="btn" onClick={() => setActivity("extensions")}>
-        <Blocks size={13} /> Get more agents from Extensions (Cursor, Gemini, Ollama, Copilot…)
+      <button className="btn btn-sm" onClick={() => setActivity("extensions")} title="Cursor, Gemini, Ollama, Copilot and more">
+        <Blocks size={13} /> Get more agents
       </button>
     </Card>
   );
@@ -165,33 +175,56 @@ export function DepartmentsCard() {
   const setDept = (deptId: string, agentId: string) =>
     saveAgentPrefs({ departments: { ...prefs.departments, [deptId]: agentId } }).catch((e) => log("error", "agents", e instanceof Error ? e.message : String(e)));
   return (
-    <Card id="settings-departments" title="Departments">
-      <p className="text-[12px] text-muted">Choose which agent each department runs on. “Department default” uses the department&apos;s recommended agent if it&apos;s installed, else your default agent.</p>
-      <div className="divide-y divide-line rounded-md border border-line">
-        {departments.map((d) => (
-          <div key={d.id} className="flex items-center gap-3 px-3 py-2 text-[12.5px]">
-            <DeptIcon name={d.icon} color={d.color} size={14} />
-            <div className="min-w-0 flex-1">
-              <div>
-                {d.name}
-                {d.pluginId && <span className="ml-1.5 text-[10.5px] text-faint">extension</span>}
-              </div>
-              <div className="truncate text-[11px] text-muted">
-                {d.role}
-                {d.usesRepo ? " · works inside the project repo" : ""}
-              </div>
-            </div>
-            <select className="input h-7 w-52 text-[12px]" value={prefs.departments[d.id] ?? ""} onChange={(e) => void setDept(d.id, e.target.value)} aria-label={`${d.name} agent`}>
-              <option value="">Department default ({label(d.defaultProvider)})</option>
-              {agents.map((a) => (
-                <option key={a.id} value={a.id} disabled={!a.available}>
-                  {a.label}
-                  {a.available ? "" : " (not installed)"}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
+    <Card
+      id="settings-departments"
+      title="Department agents"
+      description="Choose which agent each department runs on. “Department default” uses the department’s recommended agent if it’s installed, otherwise your default agent."
+    >
+      <div className="overflow-x-auto rounded-[6px] border border-line bg-editor">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th scope="col">Department</th>
+              <th scope="col" className="w-[45%]">
+                Agent
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {departments.map((d) => {
+              const sub = `${d.role}${d.usesRepo ? " · works inside the project repo" : ""}`;
+              return (
+                <tr key={d.id}>
+                  <td className="!h-auto py-1.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <DeptIcon name={d.icon} color={d.color} size={14} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-[13px]">
+                          <span className="truncate">{d.name}</span>
+                          {d.pluginId && <Pill>Extension</Pill>}
+                        </div>
+                        <div className="max-w-[360px] truncate text-[11px] text-muted" title={sub}>
+                          {sub}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <select className="input input-sm" value={prefs.departments[d.id] ?? ""} onChange={(e) => void setDept(d.id, e.target.value)} aria-label={`${d.name} agent`}>
+                      <option value="">Department default ({label(d.defaultProvider)})</option>
+                      {agents.map((a) => (
+                        <option key={a.id} value={a.id} disabled={!a.available}>
+                          {a.label}
+                          {a.available ? "" : " (not installed)"}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </Card>
   );
@@ -202,10 +235,24 @@ export function DepartmentsCard() {
 export function RegistriesCard() {
   const { log, bump } = useWorkbench();
   const [text, setText] = useState("");
-  useEffect(() => {
-    api<string[]>("/api/plugins/registries").then((u) => setText(u.join("\n"))).catch(() => {});
-  }, []);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [error, setError] = useState<unknown>(null);
+  const [saving, setSaving] = useState(false);
+  const load = () => {
+    setState("loading");
+    api<string[]>("/api/plugins/registries")
+      .then((u) => {
+        setText(u.join("\n"));
+        setState("ready");
+      })
+      .catch((e) => {
+        setError(e);
+        setState("error");
+      });
+  };
+  useEffect(load, []);
   const save = async () => {
+    setSaving(true);
     try {
       const urls = text.split(/\s+/).map((u) => u.trim()).filter(Boolean);
       const saved = await api<string[]>("/api/plugins/registries", { method: "PUT", json: { urls } });
@@ -214,18 +261,38 @@ export function RegistriesCard() {
       log("ok", "extensions", `Saved ${saved.length} marketplace registr${saved.length === 1 ? "y" : "ies"}`);
     } catch (e) {
       log("error", "extensions", e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
     }
   };
   return (
-    <Card id="settings-registries" title="Extension marketplaces">
-      <p className="text-[12px] leading-relaxed text-muted">
-        Besides the built-in REX catalog, add HTTPS URLs to JSON indexes shaped like{" "}
-        <code>{`{"plugins":[{"id","name","description","author","version","icon","categories","hasCode","source":"<git url>"}]}`}</code>. One per line.
-      </p>
-      <textarea className="input font-mono text-[11.5px]" rows={3} placeholder="https://example.com/rex-registry.json" value={text} onChange={(e) => setText(e.target.value)} />
-      <button className="btn" onClick={() => void save()}>
-        Save registries
-      </button>
+    <Card
+      id="settings-registries"
+      title="Extension marketplaces"
+      description={
+        <>
+          Besides the built-in REX catalog, add HTTPS URLs of JSON indexes shaped like{" "}
+          <code className="break-all font-mono text-[11px]">{`{"plugins":[{"id","name","description","author","version","icon","categories","hasCode","source":"<git url>"}]}`}</code>. One per line.
+        </>
+      }
+    >
+      {state === "loading" ? (
+        <LoadingRows rows={1} height={68} />
+      ) : state === "error" ? (
+        <ErrorState compact title="Couldn’t load marketplace URLs" error={error} onRetry={load} />
+      ) : (
+        <>
+          <label htmlFor="settings-registries-urls" className="sr-only">
+            Marketplace URLs
+          </label>
+          <textarea id="settings-registries-urls" className="input font-mono !text-[11.5px]" rows={3} placeholder="https://example.com/rex-registry.json" value={text} onChange={(e) => setText(e.target.value)} />
+          <div className="flex justify-end">
+            <button className="btn btn-sm" onClick={() => void save()} disabled={saving}>
+              {saving ? "Saving…" : "Save marketplaces"}
+            </button>
+          </div>
+        </>
+      )}
     </Card>
   );
 }

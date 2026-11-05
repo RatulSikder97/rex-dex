@@ -35,6 +35,7 @@ export default function Workspace({ onClose }: { onClose: () => void }) {
   const tab = useWorkbench((s) => s.missionTab);
   const setMission = useWorkbench((s) => s.setMission);
   const badges = useWorkspaceBadges();
+  const { error: dataError, refresh } = useMissionData();
   // Keep visited tabs mounted (the Live terminal and Monaco are expensive to rebuild).
   const [visited, setVisited] = useState<Set<MissionTab>>(() => new Set([tab]));
   const [outputSeenAt, setOutputSeenAt] = useState(0);
@@ -68,8 +69,8 @@ export default function Workspace({ onClose }: { onClose: () => void }) {
 
   return (
     <section aria-label="Workspace" className="flex h-full min-h-0 flex-col bg-panel">
-      <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-line px-2.5">
-        <div role="tablist" aria-label="Workspace" className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto rounded-[10px] border border-line bg-editor p-0.5 [scrollbar-width:none]" onKeyDown={onKey}>
+      <div className="flex h-9 shrink-0 items-stretch gap-1 border-b border-line pl-1.5 pr-1.5">
+        <div role="tablist" aria-label="Workspace" className="tabs min-w-0 flex-1 !border-b-0" onKeyDown={onKey}>
           {TABS.map((t) => {
             const on = tab === t.id;
             return (
@@ -78,33 +79,45 @@ export default function Workspace({ onClose }: { onClose: () => void }) {
                 ref={(el) => {
                   tabRefs.current[t.id] = el;
                 }}
+                type="button"
                 role="tab"
                 id={`mission-tab-${t.id}`}
                 aria-selected={on}
                 aria-controls={`mission-panel-${t.id}`}
                 tabIndex={on ? 0 : -1}
-                className={`rx-press flex h-7 shrink-0 items-center gap-1.5 rounded-[8px] px-2.5 text-[12px] transition-colors ${on ? "bg-elev font-medium text-fg shadow-[var(--rx-hairline),var(--rx-shadow-1)]" : "text-muted hover:bg-hover hover:text-fg"} ${t.id === "code" ? "ml-auto" : ""}`}
+                className={`!h-full ${t.id === "code" ? "ml-auto" : ""}`}
                 onClick={() => select(t.id)}
               >
-                <t.icon size={13} className={on ? "text-accent" : ""} />
+                <t.icon size={13} strokeWidth={1.8} className={on ? "text-accent" : ""} aria-hidden />
                 {t.label}
                 {badge(t.id)}
               </button>
             );
           })}
         </div>
-        <button className="icon-btn ml-1 shrink-0" onClick={onClose} aria-label="Hide workspace" title="Hide workspace">
+        <button className="icon-btn shrink-0 self-center" onClick={onClose} aria-label="Hide workspace" title="Hide workspace">
           <PanelRightClose size={15} />
         </button>
       </div>
 
+      {project && dataError && (
+        <div role="alert" className="flex h-8 shrink-0 items-center gap-2 border-b border-line bg-[color-mix(in_srgb,var(--err)_10%,var(--bg-editor))] px-3 text-[12px]">
+          <CircleAlert size={13} className="shrink-0 text-err" aria-hidden />
+          <span className="min-w-0 flex-1 truncate" title={dataError}>
+            {dataError}
+          </span>
+          <button className="btn btn-sm btn-ghost shrink-0" onClick={refresh}>
+            Retry
+          </button>
+        </div>
+      )}
       <div className="relative min-h-0 flex-1">
         {!project ? (
           <PanelEmpty icon={FolderPlus} title="Start with a project" hint="Its plan, live work, output and issues collect here.">
-            <button className="rx-primary rx-press h-8 rounded-lg px-3 text-[12px]" onClick={() => void newProjectFlow()}>
+            <button className="btn btn-primary" onClick={() => void newProjectFlow()}>
               <FolderPlus size={13} /> New project
             </button>
-            <button className="btn !h-8 !rounded-lg" onClick={() => void openFolderFlow()}>
+            <button className="btn" onClick={() => void openFolderFlow()}>
               Open folder…
             </button>
           </PanelEmpty>
@@ -128,10 +141,10 @@ export default function Workspace({ onClose }: { onClose: () => void }) {
         )}
       </div>
       {project && !project.repo_path && tab === "pipeline" && (
-        <div className="flex shrink-0 items-center gap-2 border-t border-line bg-side px-4 py-2 text-[11.5px] text-muted">
+        <div className="flex h-9 shrink-0 items-center gap-2 border-t border-line bg-side px-3 text-[12px] text-muted">
           <FolderGit2 size={13} className="text-faint" />
-          <span className="min-w-0 flex-1 truncate">Link a repo so Engineering and QA can work on code.</span>
-          <button className="rx-press btn !h-7 !rounded-lg" onClick={() => useWorkbench.getState().openTab({ kind: "project", projectId: project.id }, `${project.name} · Settings`)}>
+          <span className="min-w-0 flex-1 truncate" title="Link a repo so Engineering and QA can work on code.">Link a repo so Engineering and QA can work on code.</span>
+          <button className="btn btn-sm shrink-0" onClick={() => useWorkbench.getState().openTab({ kind: "project", projectId: project.id }, `${project.name} · Settings`)}>
             Link repo
           </button>
         </div>

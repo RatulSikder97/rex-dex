@@ -7,6 +7,7 @@ import type { FitAddon as XFitAddon } from "@xterm/addon-fit";
 import { api } from "@/lib/client";
 import { getSetting, useSettingsStore } from "@/store/settings";
 import { useWorkbench, type TerminalAgentLaunch } from "@/store/workbench";
+import { kbd } from "./shortcuts";
 
 export interface TerminalInfo {
   id: string;
@@ -312,37 +313,43 @@ export default function TerminalPanel() {
         {sessions?.map((t) => <TerminalView key={t.id} session={t} active={t.id === active} onExit={onExit} />)}
         {sessions && !sessions.length && (
           <div className="flex h-full items-center justify-center text-[12px] text-faint">
-            <button className="btn" onClick={() => void create()}>
-              <Plus size={13} /> New Terminal
+            <button className="btn btn-sm" onClick={() => void create()}>
+              <Plus size={13} /> New terminal
             </button>
           </div>
         )}
       </div>
       <div className="flex w-40 shrink-0 flex-col border-l border-line">
-        <div className="flex h-6 shrink-0 items-center justify-end gap-0.5 px-1">
-          <button className="icon-btn" title="New Terminal" onClick={() => void create()}>
+        <div className="flex h-6 shrink-0 items-center justify-end gap-0.5 px-1" role="toolbar" aria-label="Terminal actions">
+          <button className="icon-btn" title={`New terminal (${kbd("⌃⇧`")})`} aria-label="New terminal" onClick={() => void create()}>
             <Plus size={14} />
           </button>
-          <button className="icon-btn" title="Kill Terminal" disabled={!active} onClick={() => active && void kill(active)}>
+          <button className="icon-btn" title="Kill terminal" aria-label="Kill terminal" disabled={!active} onClick={() => active && void kill(active)}>
             <Trash2 size={13} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto" role="listbox" aria-label="Terminals">
           {sessions?.map((t) => (
             <div
               key={t.id}
-              title={t.cwd}
+              role="option"
+              aria-selected={t.id === active}
+              tabIndex={t.id === active ? 0 : -1}
+              title={exited[t.id] ? `${t.cwd} (exited)` : t.cwd}
               onClick={() => setActive(t.id)}
-              className={`group flex h-[22px] cursor-pointer items-center gap-1.5 pl-2 pr-1 text-[12px] ${t.id === active ? "bg-active text-fg" : "text-muted hover:bg-hover hover:text-fg"}`}
+              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setActive(t.id))}
+              className={`side-row group flex h-[22px] items-center gap-1.5 pl-2 pr-1 text-[12px] outline-none ${t.id === active ? "bg-active text-fg" : "text-muted hover:bg-hover hover:text-fg"}`}
             >
-              <SquareTerminal size={13} className={exited[t.id] ? "text-faint" : "text-muted"} />
+              <SquareTerminal size={13} className={`shrink-0 ${exited[t.id] ? "text-faint" : "text-muted"}`} aria-hidden />
               <span className={`min-w-0 flex-1 truncate ${exited[t.id] ? "text-faint line-through" : ""}`}>
                 {t.title}
                 <span className="ml-1 text-faint">{t.cwd.split("/").pop()}</span>
               </span>
               <button
                 className="icon-btn hidden !h-[18px] !w-[18px] group-hover:inline-flex"
-                title="Kill"
+                tabIndex={-1}
+                title="Kill terminal"
+                aria-label={`Kill ${t.title}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   void kill(t.id);

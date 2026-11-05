@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight,
   ArrowUp,
   Cable,
   Check,
@@ -34,6 +33,7 @@ import { useSetting } from "@/store/settings";
 import AgentLive from "@/components/mission/AgentLive";
 import { useMissionData } from "@/components/mission/data";
 import { DeptAvatar } from "@/components/mission/ui";
+import { Pill } from "@/components/ui/kit";
 import { ProjectAvatar, openLogoStudio } from "@/components/ProjectLogo";
 
 interface Turn {
@@ -508,8 +508,8 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
   const modelItems: PickerItem[] = [{ id: "", label: "Default model", sub: "Whatever the CLI is configured to use" }, ...(agent?.models ?? []).map((m) => ({ id: m, label: m }))];
 
   const composerFooter = (
-        <div className="mt-1.5 flex items-center justify-between px-1 text-[10.5px] text-faint">
-          <span>
+        <div className="mt-1.5 flex items-center justify-between gap-2 px-1 text-[11px] text-faint">
+          <span className="min-w-0 truncate">
             {agentsLoaded && !agent?.available ? (
               <span className="text-warn">{agents.label(agentId)} isn&apos;t installed</span>
             ) : sync.terminalAlive ? (
@@ -518,7 +518,7 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
               `Runs locally via ${agents.label(agentId)}`
             )}
           </span>
-          <span>
+          <span className="shrink-0">
             <span className="kbd">{sendOnEnter ? "↵" : "⌘↵"}</span> send
           </span>
         </div>
@@ -543,7 +543,7 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
           <textarea
             ref={textarea}
             style={{ outline: "none" }}
-            className={`block max-h-60 w-full resize-none bg-transparent px-3.5 pb-1 leading-relaxed outline-none placeholder:text-faint ${large ? "min-h-[76px] pt-3.5 text-[14px]" : "min-h-[52px] pt-2.5 text-[13px]"}`}
+            className={`block max-h-60 w-full resize-none bg-transparent px-3.5 pb-1 leading-relaxed outline-none placeholder:text-faint ${large ? "min-h-[72px] pt-3 text-[13px]" : "min-h-[52px] pt-2.5 text-[13px]"}`}
             rows={2}
             placeholder={large ? `Ask ${dept.name} to plan, build, write or ship something…` : `Message ${dept.name}…`}
             value={input}
@@ -566,7 +566,7 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
               title="Agent"
               footer={
                 <button
-                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12px] text-muted hover:bg-hover hover:text-fg"
+                  className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-left text-[12px] text-muted hover:bg-hover hover:text-fg"
                   onClick={() => setActivity("extensions")}
                 >
                   <Plus size={13} /> Add agents from Extensions
@@ -580,18 +580,19 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
             {attachable && <Toggle on={attachTab} onClick={() => setAttachTab((v) => !v)} icon={<Paperclip size={12} />} label="Tab" title={`Attach "${activeTab?.title}" as context`} />}
             <div className="flex-1" />
             {runningTurn && !input.trim() ? (
-              <button className="flex h-7 w-7 items-center justify-center rounded-full bg-fg text-bg hover:opacity-85" onClick={() => cancel(runningTurn.runId)} title="Stop" aria-label="Stop">
+              <button type="button" className="btn !h-7 !w-7 shrink-0 !p-0" onClick={() => cancel(runningTurn.runId)} title="Stop" aria-label="Stop">
                 <Square size={11} fill="currentColor" />
               </button>
             ) : (
               <button
-                className={`rx-primary rx-press rounded-full ${large ? "h-8 w-8" : "h-7 w-7"}`}
+                type="button"
+                className="btn btn-primary !h-7 !w-7 shrink-0 !p-0"
                 onClick={() => void send()}
                 disabled={!input.trim() || !agent?.available}
-                title={`${busy ? "Queue message" : "Send"} (${sendOnEnter ? "↵" : "⌘↵"})`}
-                aria-label="Send"
+                title={`${busy ? "Queue message" : "Send"} (${sendOnEnter ? "↩" : "⌘↩"})`}
+                aria-label={`${busy ? "Queue message" : "Send"} (${sendOnEnter ? "↩" : "⌘↩"})`}
               >
-                <ArrowUp size={15} strokeWidth={2.4} />
+                <ArrowUp size={14} strokeWidth={2.2} />
               </button>
             )}
           </div>
@@ -610,92 +611,106 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
     if (prompt !== undefined) setInput(prompt);
     requestAnimationFrame(() => textarea.current?.focus({ preventScroll: true }));
   };
+  const rosterKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = departments.findIndex((d) => d.id === deptId);
+    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!step || i < 0) return;
+    e.preventDefault();
+    const next = departments[(i + step + departments.length) % departments.length];
+    setDeptId(next.id);
+    requestAnimationFrame(() => document.getElementById(`roster-${next.id}`)?.focus());
+  };
+  const installNotice = agentsLoaded && !agent?.available && (
+    <div role="status" className="mt-3 flex flex-wrap items-center gap-2 rounded-[6px] border border-[color:color-mix(in_srgb,var(--warn)_40%,var(--border))] bg-[color:color-mix(in_srgb,var(--warn)_8%,transparent)] px-3 py-2 text-[12px]">
+      <span className="min-w-0 flex-1 text-fg">{agents.label(agentId)} isn&apos;t installed on this machine.</span>
+      {agent?.login && (
+        <button type="button" className="btn btn-sm" onClick={() => launchTerminal({ id: agentId, action: "login" })}>
+          <LogIn size={12} /> Sign in
+        </button>
+      )}
+      {agent?.install && (
+        <button type="button" className="btn btn-primary btn-sm" onClick={() => launchTerminal({ id: agentId, action: "install" })}>
+          <Download size={12} /> Install in terminal
+        </button>
+      )}
+    </div>
+  );
+  const repoNotice = dept.usesRepo && !project?.repo_path && <p className="mt-2 text-[12px] text-warn">Link a repo folder in project settings so {dept.name} can work inside your codebase.</p>;
   const homeView = (
-    <div className="rx-hero @container mx-auto flex min-h-full w-full max-w-[760px] flex-col justify-center px-6 pb-8 pt-8">
-      <div className="rx-in flex flex-col items-center text-center">
+    <div className="@container mx-auto flex min-h-full w-full max-w-[720px] flex-col justify-center px-6 pb-8 pt-6">
+      <div>
         {project && (
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-1.5">
-            <span className="rx-chip !h-7 !pl-1 !text-[11.5px]">
-              <ProjectAvatar project={project} size={20} /> <span className="font-medium text-fg">{project.name}</span>
-              <span className="text-faint">·</span>
-              <span className="capitalize">{project.stage}</span>
+          <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-[12px] text-muted">
+            <ProjectAvatar project={project} size={16} />
+            <span className="truncate font-medium text-fg" title={project.name}>
+              {project.name}
             </span>
+            <Pill className="capitalize">{project.stage}</Pill>
             {!project.logo && (
-              <button className="rx-chip rx-press !h-7 border-dashed !text-[11.5px] hover:border-[color-mix(in_srgb,var(--accent)_50%,var(--border))] hover:text-fg" onClick={() => openLogoStudio(project.id)}>
-                <Sparkles size={12} className="text-accent" /> Generate a logo
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => openLogoStudio(project.id)}>
+                <Sparkles size={12} /> Generate a logo
               </button>
             )}
           </div>
         )}
-        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.02em] text-fg">What should your company do today?</h1>
-        <p className="mt-2 text-[13px] text-muted">Pick who answers, describe the outcome, and they get to work.</p>
+        <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.01em] text-fg">What should your company do today?</h1>
+        <p className="mt-1 text-[12.5px] text-muted">Pick who answers, describe the outcome, and they get to work.</p>
       </div>
 
-      {/* team roster: the selected department expands to show its name */}
-      <div className="rx-in mt-6 flex flex-wrap items-center justify-center gap-1" role="radiogroup" aria-label="Who answers" style={{ ["--i" as string]: 1 }}>
-        {departments.map((d) => {
-          const on = d.id === deptId;
-          return (
-            <button
-              key={d.id}
-              role="radio"
-              aria-checked={on}
-              title={`${d.name} — ${d.role}`}
-              onClick={() => pick(d.id)}
-              className={`rx-press flex h-9 items-center gap-2 rounded-full transition-[background-color,box-shadow,padding] duration-200 ${
-                on ? "border border-line bg-elev pl-1 pr-3 shadow-[var(--rx-hairline),var(--rx-shadow-1)]" : "border border-transparent p-1 hover:bg-hover"
-              }`}
-            >
-              <DeptAvatar dept={d} size={26} />
-              {on && <span className="rx-fade whitespace-nowrap text-[12.5px] font-medium">{d.name}</span>}
-            </button>
-          );
-        })}
+      {/* team roster */}
+      <div className="mt-5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex flex-wrap items-center gap-1" role="radiogroup" aria-label="Who answers" onKeyDown={rosterKey}>
+          {departments.map((d) => {
+            const on = d.id === deptId;
+            return (
+              <button
+                key={d.id}
+                id={`roster-${d.id}`}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                aria-label={d.name}
+                tabIndex={on ? 0 : -1}
+                title={`${d.name} — ${d.role}`}
+                onClick={() => pick(d.id)}
+                className={`grid h-7 w-7 place-items-center rounded-[6px] transition-colors ${on ? "bg-active shadow-[inset_0_0_0_1px_var(--accent)]" : "hover:bg-hover"}`}
+              >
+                <DeptAvatar dept={d} size={22} />
+              </button>
+            );
+          })}
+        </div>
+        <span className="min-w-0 truncate text-[12px] text-muted" title={dept.role}>
+          <span className="font-medium text-fg">{dept.name}</span> · {dept.role}
+        </span>
       </div>
 
-      <div className="rx-in mt-3" style={{ ["--i" as string]: 2 }}>
+      <div className="mt-3">
         {composerBox(true)}
         {composerFooter}
       </div>
-
-      {agentsLoaded && !agent?.available && (
-        <div className="mx-auto mt-4 w-full max-w-md rounded-[var(--rx-r-md)] border border-warn/40 bg-warn/10 p-3 text-[12px] text-warn">
-          {agents.label(agentId)} isn&apos;t installed on this machine.
-          <div className="mt-2 flex gap-1.5">
-            {agent?.install && (
-              <button className="btn btn-primary h-6" onClick={() => launchTerminal({ id: agentId, action: "install" })}>
-                <Download size={12} /> Install in terminal
-              </button>
-            )}
-            {agent?.login && (
-              <button className="btn h-6" onClick={() => launchTerminal({ id: agentId, action: "login" })}>
-                <LogIn size={12} /> Sign in
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      {dept.usesRepo && !project?.repo_path && <p className="mt-3 text-center text-[11.5px] text-warn">Link a repo folder in project settings so {dept.name} can work inside your codebase.</p>}
+      {installNotice}
+      {repoNotice}
 
       {suggestions.length > 0 && (
-        <section aria-label="Suggestions" className="mt-8">
-          <h2 className="rx-label mb-2 px-1">Suggestions</h2>
-          <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @2xl:grid-cols-3">
-            {suggestions.map(({ d, q }, i) => (
+        <section aria-labelledby="home-suggestions" className="mt-7">
+          <h2 id="home-suggestions" className="section-title mb-2">
+            Suggestions
+          </h2>
+          <div className="grid grid-cols-1 gap-1.5 @sm:grid-cols-2">
+            {suggestions.map(({ d, q }) => (
               <button
                 key={`${d.id}:${q.label}`}
-                className={`rx-card rx-hover rx-press rx-in group flex-col items-start gap-2 p-3 text-left ${i >= 4 ? "hidden @2xl:flex" : "flex"}`}
-                style={{ ["--i" as string]: 3 + i }}
+                type="button"
+                className="flex h-9 min-w-0 items-center gap-2.5 rounded-[6px] border border-line px-2.5 text-left transition-colors hover:bg-hover"
                 onClick={() => pick(d.id, q.prompt)}
                 title={q.prompt}
               >
-                <span className="flex w-full items-center gap-2">
-                  <DeptAvatar dept={d} size={22} />
-                  <span className="min-w-0 flex-1 truncate text-[11px] text-faint">{d.name}</span>
-                  <ArrowRight size={12} className="shrink-0 -translate-x-1 text-faint opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-100" />
+                <DeptAvatar dept={d} size={20} />
+                <span className="min-w-0 flex-1 truncate text-[13px]">
+                  {q.label}
+                  <span className="text-faint"> · {d.name}</span>
                 </span>
-                <span className="text-[13px] font-medium leading-snug">{q.label}</span>
-                <span className="line-clamp-2 text-[11.5px] leading-snug text-muted">{q.prompt}</span>
               </button>
             ))}
           </div>
@@ -703,26 +718,27 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
       )}
 
       {recent.length > 0 && (
-        <section aria-label="Continue" className="mt-6">
-          <h2 className="rx-label mb-2 px-1">Continue</h2>
-          <ul className="rx-card divide-y divide-[color:var(--border)] overflow-hidden">
+        <section aria-labelledby="home-continue" className="mt-6">
+          <h2 id="home-continue" className="section-title mb-1">
+            Continue
+          </h2>
+          <ul className="-mx-2">
             {recent.map((t) => {
               const d = getDepartment(t.department);
               return (
                 <li key={t.thread_id}>
                   <button
-                    className="rx-press flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-hover"
+                    type="button"
+                    className="flex h-7 w-full min-w-0 items-center gap-2.5 rounded-[4px] px-2 text-left hover:bg-hover"
                     onClick={() => useWorkbench.getState().openConversation({ department: t.department, threadId: t.thread_id })}
+                    title={t.title}
                   >
-                    <DeptAvatar dept={d} size={24} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[12.5px]">{t.title}</span>
-                      <span className="block truncate text-[11px] text-faint">
-                        {d.name} · {t.turns} message{t.turns === 1 ? "" : "s"}
-                      </span>
+                    <DeptAvatar dept={d} size={18} />
+                    <span className="min-w-0 flex-1 truncate text-[13px]">{t.title}</span>
+                    <span className="hidden shrink-0 text-[11px] text-faint @md:inline">
+                      {d.name} · {t.turns} message{t.turns === 1 ? "" : "s"}
                     </span>
-                    <span className={`shrink-0 text-[11px] ${t.running ? "font-medium text-accent" : "text-faint"}`}>{t.running ? "running" : timeAgo(t.updated_at)}</span>
-                    <ArrowRight size={13} className="shrink-0 text-faint" />
+                    <span className={`w-14 shrink-0 text-right text-[11px] ${t.running ? "font-medium text-accent" : "text-faint"}`}>{t.running ? "Running" : timeAgo(t.updated_at)}</span>
                   </button>
                 </li>
               );
@@ -736,30 +752,28 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
   return (
     <aside className={`flex h-full w-full flex-col ${variant === "main" ? "bg-editor" : "bg-side"}`} aria-label="Agent panel">
       {/* header */}
-      <div className={`flex shrink-0 items-center gap-1 border-b border-line ${variant === "main" ? "h-12 px-3" : "h-10 px-2"}`}>
+      <div className={`flex shrink-0 items-center gap-1 border-b border-line ${variant === "main" ? "h-9 px-2" : "h-9 px-2"}`}>
         <div className="relative min-w-0" ref={deptMenu.ref}>
           <button
-            className="flex h-7 min-w-0 items-center gap-2 rounded-md px-1.5 hover:bg-hover"
+            className="flex h-7 min-w-0 items-center gap-2 rounded-[4px] px-1.5 hover:bg-hover"
             onClick={() => deptMenu.setOpen((o) => !o)}
             aria-haspopup="listbox"
             aria-expanded={deptMenu.open}
             title="Switch department"
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded" style={{ background: `${dept.color}22` }}>
-              <DeptIcon name={dept.icon} color={dept.color} size={12} />
-            </span>
+            <DeptAvatar dept={dept} size={20} />
             <span className="truncate text-[13px] font-semibold">{dept.name}</span>
             <ChevronDown size={13} className="shrink-0 text-faint" />
           </button>
           {deptMenu.open && (
-            <div className="absolute rounded-lg border border-line bg-elev shadow-[0_12px_32px_rgba(0,0,0,.45)] left-0 top-9 z-30 max-h-[70vh] w-80 overflow-y-auto p-1" role="listbox">
+            <div className="popover absolute left-0 top-9 z-30 max-h-[70vh] w-80 overflow-y-auto p-1" role="listbox">
               {[
                 ["Departments", builtinDepts],
                 ["From extensions", pluginDepts],
               ].map(([title, list]) =>
                 (list as typeof departments).length ? (
                   <div key={title as string}>
-                    <div className="px-2.5 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-faint">{title as string}</div>
+                    <div className="section-title px-2.5 pb-1 pt-2">{title as string}</div>
                     {(list as typeof departments).map((d) => (
                       <button
                         key={d.id}
@@ -769,13 +783,11 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
                           setDeptId(d.id);
                           deptMenu.setOpen(false);
                         }}
-                        className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left hover:bg-hover ${d.id === deptId ? "bg-active" : ""}`}
+                        className={`flex w-full items-center gap-2.5 rounded-[4px] px-2.5 py-1.5 text-left hover:bg-hover ${d.id === deptId ? "bg-active" : ""}`}
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md" style={{ background: `${d.color}1f` }}>
-                          <DeptIcon name={d.icon} color={d.color} size={14} />
-                        </span>
+                        <DeptAvatar dept={d} size={24} />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-[12.5px] font-medium">{d.name}</span>
+                          <span className="block text-[13px] font-medium">{d.name}</span>
                           <span className="block truncate text-[11px] text-muted">{d.role}</span>
                         </span>
                         {d.id === deptId && <Check size={13} className="shrink-0 text-accent" />}
@@ -788,21 +800,22 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
           )}
         </div>
         {sync.terminalAlive && (
-          <span className="ml-1 flex items-center gap-1 rounded-full bg-ok/15 px-2 py-0.5 text-[10.5px] text-ok" title="This conversation is open in the agent's terminal; messages are typed there">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ok" /> live
-          </span>
+          <Pill tone="ok" className="ml-1 shrink-0" title="This task is open in the agent's terminal; messages are typed there">
+            Live
+          </Pill>
         )}
         <div className="flex-1" />
         {agent?.interactive && (
-          <div className="mr-1 flex rounded-md border border-line p-0.5" role="tablist" aria-label="View">
+          <div className="seg mr-1 shrink-0" role="tablist" aria-label="View">
             {(["chat", "terminal"] as const).map((m) => (
               <button
                 key={m}
+                type="button"
                 role="tab"
                 aria-selected={mode === m}
-                className={`h-5 rounded px-2 text-[11px] capitalize ${mode === m ? "bg-active text-fg" : "text-muted hover:text-fg"}`}
+                className="capitalize"
                 onClick={() => setMode(m)}
-                title={m === "chat" ? "Chat view of this conversation" : `${agents.label(agentId)}'s own terminal UI, same session`}
+                title={m === "chat" ? "Chat view of this task" : `${agents.label(agentId)}'s own terminal UI, same session`}
               >
                 {m}
               </button>
@@ -815,8 +828,8 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
         <div className="relative" ref={historyMenu.ref}>
           <button
             className="icon-btn"
-            title="Conversation history"
-            aria-label="Conversation history"
+            title="Task history"
+            aria-label="Task history"
             onClick={() => {
               if (!historyMenu.open) loadThreads();
               historyMenu.setOpen((o) => !o);
@@ -825,17 +838,17 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
             <History size={15} />
           </button>
           {historyMenu.open && (
-            <div className="absolute rounded-lg border border-line bg-elev shadow-[0_12px_32px_rgba(0,0,0,.45)] right-0 top-9 z-30 max-h-[60vh] w-80 overflow-y-auto p-1">
-              <div className="px-2.5 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-faint">{dept.name} · history</div>
+            <div className="popover absolute right-0 top-9 z-30 max-h-[60vh] w-80 overflow-y-auto p-1">
+              <div className="section-title px-2.5 pb-1 pt-2">{dept.name} · history</div>
               {threads.map((t) => (
                 <div
                   key={t.thread_id}
-                  className={`group flex cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 hover:bg-hover ${t.thread_id === threadId ? "bg-active" : ""}`}
+                  className={`group flex items-center gap-2 rounded-[4px] px-2.5 py-1.5 hover:bg-hover ${t.thread_id === threadId ? "bg-active" : ""}`}
                   onClick={() => openThread(t.thread_id)}
                 >
                   <MessageSquare size={13} className="shrink-0 text-faint" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px]">{t.title}</span>
+                    <span className="block truncate text-[13px]" title={t.title}>{t.title}</span>
                     <span className="block text-[11px] text-faint">
                       {t.turns} message{t.turns === 1 ? "" : "s"} · {timeAgo(t.updated_at)}
                       {t.running ? " · running" : ""}
@@ -843,9 +856,9 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
                   </span>
                   {!t.running && (
                     <button
-                      className="icon-btn opacity-0 group-hover:opacity-100"
-                      title="Delete conversation"
-                      aria-label="Delete conversation"
+                      className="icon-btn opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                      title="Delete task"
+                      aria-label="Delete task"
                       onClick={(e) => {
                         e.stopPropagation();
                         void removeThread(t.thread_id);
@@ -856,12 +869,12 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
                   )}
                 </div>
               ))}
-              {!threads.length && <div className="px-2.5 py-3 text-center text-[12px] text-muted">No conversations yet.</div>}
+              {!threads.length && <div className="px-2.5 py-3 text-center text-[12px] text-muted">No tasks yet.</div>}
             </div>
           )}
         </div>
-        <button className="icon-btn" title="New conversation" aria-label="New conversation" onClick={newThread}>
-          <Plus size={16} />
+        <button className="icon-btn" title="New task" aria-label="New task" onClick={newThread}>
+          <Plus size={15} />
         </button>
       </div>
 
@@ -877,74 +890,63 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
       ) : (
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
         {!items.length ? (
-          <div className="flex min-h-full flex-col justify-center px-5 py-8">
-            <div className="flex flex-col items-center text-center">
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-2xl"
-                style={{ background: `linear-gradient(135deg, ${dept.color}33, ${dept.color}0d)`, boxShadow: `inset 0 0 0 1px ${dept.color}40` }}
-              >
-                <DeptIcon name={dept.icon} color={dept.color} size={26} />
+          <div className="@container flex min-h-full flex-col justify-center px-4 py-6">
+            <div className="flex items-center gap-2.5">
+              <DeptAvatar dept={dept} size={28} />
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-[15px] font-semibold">How can {dept.name} help?</h2>
+                <p className="truncate text-[12px] text-muted" title={dept.role}>
+                  {dept.role}
+                </p>
               </div>
-              <h2 className="mt-4 text-[17px] font-semibold tracking-tight">How can {dept.name} help?</h2>
-              <p className="mt-1 max-w-[30ch] text-[12.5px] leading-relaxed text-muted">{dept.role}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <button
-                className="mt-3 flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11.5px] text-muted hover:border-faint hover:text-fg"
+                type="button"
+                className="btn btn-ghost btn-sm -ml-2"
                 onClick={() => {
                   openTab({ kind: "settings" }, "Settings");
                   setActivity("settings");
                   setTimeout(() => document.getElementById("settings-agents")?.scrollIntoView({ behavior: "smooth" }), 150);
                 }}
-                title={agent?.detail}
+                title={agent?.detail ? `${agent.detail} — change in Settings` : "Change the agent in Settings"}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${!agentsLoaded ? "animate-pulse bg-faint" : agent?.authError ? "bg-warn" : agent?.available ? "bg-ok" : "bg-err"}`} />
-                {agents.label(agentId)}
-                {model ? ` · ${model}` : ""}
-                {project ? ` · ${project.name}` : ""}
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${!agentsLoaded ? "bg-faint" : agent?.authError ? "bg-warn" : agent?.available ? "bg-ok" : "bg-err"}`} aria-hidden />
+                <span className="max-w-[220px] truncate">
+                  {agents.label(agentId)}
+                  {model ? ` · ${model}` : ""}
+                  {project ? ` · ${project.name}` : ""}
+                </span>
               </button>
             </div>
 
             <DeptConnections department={dept.id} />
-
-            {agentsLoaded && !agent?.available && (
-              <div className="mx-auto mt-4 w-full max-w-sm rounded-lg border border-warn/40 bg-warn/10 p-3 text-[12px] text-warn">
-                {agents.label(agentId)} isn&apos;t installed on this machine.
-                <div className="mt-2 flex gap-1.5">
-                  {agent?.install && (
-                    <button className="btn btn-primary h-6" onClick={() => launchTerminal({ id: agentId, action: "install" })}>
-                      <Download size={12} /> Install in terminal
-                    </button>
-                  )}
-                  {agent?.login && (
-                    <button className="btn h-6" onClick={() => launchTerminal({ id: agentId, action: "login" })}>
-                      <LogIn size={12} /> Sign in
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+            {installNotice}
+            {repoNotice}
 
             {dept.quickActions.length > 0 && (
-              <div className="mx-auto mt-6 grid w-full max-w-md gap-2">
-                {dept.quickActions.map((q) => (
-                  <button
-                    key={q.label}
-                    className="group rounded-lg border border-line bg-elev/40 px-3 py-2.5 text-left transition-colors hover:border-accent/60 hover:bg-elev"
-                    onClick={() => {
-                      setInput(q.prompt);
-                      textarea.current?.focus();
-                    }}
-                  >
-                    <div className="flex items-center gap-2 text-[12.5px] font-medium">
-                      <Sparkles size={12} className="text-accent" /> {q.label}
-                      <ArrowRight size={12} className="ml-auto text-faint opacity-0 transition-opacity group-hover:opacity-100" />
-                    </div>
-                    <div className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-muted">{q.prompt}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {dept.usesRepo && !project?.repo_path && (
-              <p className="mx-auto mt-4 max-w-sm text-center text-[11.5px] text-warn">Link a repo folder in project settings so {dept.name} can work inside your codebase.</p>
+              <section aria-labelledby="panel-suggestions" className="mt-5">
+                <h3 id="panel-suggestions" className="section-title mb-1.5">
+                  Suggestions
+                </h3>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {dept.quickActions.map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      className="flex h-8 min-w-0 items-center gap-2 rounded-[6px] border border-line px-2.5 text-left transition-colors hover:bg-hover"
+                      onClick={() => {
+                        setInput(q.prompt);
+                        textarea.current?.focus();
+                      }}
+                      title={q.prompt}
+                    >
+                      <Sparkles size={12} className="shrink-0 text-faint" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate text-[13px]">{q.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
             )}
           </div>
         ) : (
@@ -952,12 +954,12 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
             {items.map((t) => (
               <div key={t.runId} className="rx-fade space-y-3">
                 <div className="flex justify-end">
-                  <div className={`max-w-[85%] rounded-2xl rounded-br-md border border-[color-mix(in_srgb,var(--accent)_22%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-3.5 py-2 leading-relaxed whitespace-pre-wrap text-fg ${variant === "main" ? "text-[13px]" : "text-[12.5px]"}`}>{t.brief}</div>
+                  <div className={`max-w-[85%] rounded-[8px] border border-[color-mix(in_srgb,var(--accent)_22%,transparent)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-3.5 py-2 leading-relaxed whitespace-pre-wrap text-fg ${variant === "main" ? "text-[13px]" : "text-[12.5px]"}`}>{t.brief}</div>
                 </div>
                 <div className="group">
                   <div className="mb-1.5 flex items-center gap-2">
                     <DeptAvatar dept={dept} size={22} />
-                    <span className="text-[12.5px] font-semibold">{dept.name}</span>
+                    <span className="text-[13px] font-semibold">{dept.name}</span>
                     <span className="text-[11px] text-faint">
                       {agents.label(t.provider)} · {t.status === "running" ? duration(t, now) : `${duration(t, now)}${t.status === "done" ? "" : ` · ${t.status}`}`}
                     </span>
@@ -966,9 +968,9 @@ export default function AgentPanel({ variant = "panel" }: { variant?: "panel" | 
                     {t.output ? <AgentOutput text={t.output} streaming={t.status === "running"} showTools={showTools} /> : null}
                     {t.status === "running" && !t.output && <Typing />}
                     {dept.outputKind === "svg" && t.status === "done" && extractSvg(t.output) && (
-                      <img alt="Generated graphic" className="mt-2 w-full rounded-lg border border-line bg-white" src={svgDataUrl(extractSvg(t.output)!)} />
+                      <img alt="Generated graphic" className="mt-2 w-full rounded-[6px] border border-line bg-white" src={svgDataUrl(extractSvg(t.output)!)} />
                     )}
-                    {t.error && <div className="mt-2 rounded-lg border border-err/40 bg-err/10 px-3 py-2 text-[12px] whitespace-pre-wrap text-err">{t.error}</div>}
+                    {t.error && <div className="mt-2 rounded-[6px] border border-err/40 bg-err/10 px-3 py-2 text-[12px] whitespace-pre-wrap text-err">{t.error}</div>}
                     {t.status !== "running" && t.output && (
                       <div className="mt-1.5 flex items-center gap-0.5 text-faint opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                         <CopyButton text={t.output} />
@@ -1024,7 +1026,7 @@ function Picker(props: { items: PickerItem[]; value: string; onChange: (v: strin
   return (
     <div className="relative min-w-0" ref={pop.ref}>
       <button
-        className={`flex h-7 min-w-0 items-center gap-1.5 rounded-md px-2 text-[11.5px] text-muted hover:bg-hover hover:text-fg ${pop.open ? "bg-hover text-fg" : ""}`}
+        className={`flex h-6 min-w-0 items-center gap-1.5 rounded-[4px] px-1.5 text-[12px] text-muted hover:bg-hover hover:text-fg ${pop.open ? "bg-hover text-fg" : ""}`}
         onClick={() => pop.setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={pop.open}
@@ -1036,8 +1038,8 @@ function Picker(props: { items: PickerItem[]; value: string; onChange: (v: strin
         <ChevronDown size={11} className="shrink-0 opacity-70" />
       </button>
       {pop.open && (
-        <div className="absolute rounded-lg border border-line bg-elev shadow-[0_12px_32px_rgba(0,0,0,.45)] bottom-9 left-0 z-30 max-h-[50vh] w-64 overflow-y-auto p-1" role="listbox" aria-label={props.title}>
-          <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-faint">{props.title}</div>
+        <div className="popover absolute bottom-8 left-0 z-30 max-h-[50vh] w-64 overflow-y-auto p-1" role="listbox" aria-label={props.title}>
+          <div className="section-title px-2.5 pb-1 pt-1.5">{props.title}</div>
           {props.items.map((it) => (
             <button
               key={it.id || "__default"}
@@ -1048,7 +1050,7 @@ function Picker(props: { items: PickerItem[]; value: string; onChange: (v: strin
                 props.onChange(it.id);
                 pop.setOpen(false);
               }}
-              className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left hover:bg-hover disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
+              className="flex w-full items-center gap-2.5 rounded-[4px] px-2.5 py-1.5 text-left hover:bg-hover disabled:opacity-45 disabled:hover:bg-transparent"
             >
               {it.icon ? <DeptIcon name={it.icon} size={14} /> : <span className="w-[14px]" />}
               <span className="min-w-0 flex-1">
@@ -1071,7 +1073,7 @@ function Picker(props: { items: PickerItem[]; value: string; onChange: (v: strin
 function Toggle({ on, onClick, icon, label, title }: { on: boolean; onClick: () => void; icon: React.ReactNode; label: string; title: string }) {
   return (
     <button
-      className={`flex h-7 items-center gap-1 rounded-md px-2 text-[11.5px] ${on ? "bg-accent/15 text-accent" : "text-muted hover:bg-hover hover:text-fg"}`}
+      className={`flex h-6 items-center gap-1 rounded-[4px] px-1.5 text-[12px] ${on ? "bg-accent/15 text-accent" : "text-muted hover:bg-hover hover:text-fg"}`}
       onClick={onClick}
       aria-pressed={on}
       title={title}
@@ -1136,7 +1138,7 @@ function ToolGroup({ items, live }: { items: string[]; live: boolean }) {
   const [open, setOpen] = useState(false);
   const shown = open || items.length <= 3 ? items : items.slice(-2);
   return (
-    <div className="rounded-lg border border-line bg-elev/40 px-2 py-1.5">
+    <div className="rounded-[6px] border border-line bg-elev/40 px-2 py-1.5">
       {items.length > 3 && (
         <button className="mb-1 flex items-center gap-1 text-[11px] text-faint hover:text-fg" onClick={() => setOpen((o) => !o)}>
           <ChevronDown size={11} className={open ? "" : "-rotate-90"} /> {items.length} actions
@@ -1184,22 +1186,15 @@ function DeptConnections({ department }: { department: string }) {
       .catch(() => setList([]));
   }, [department, version]);
   return (
-    <div className="mx-auto mt-4 flex max-w-md flex-wrap items-center justify-center gap-1.5">
+    <div className="mt-2 flex flex-wrap items-center gap-1" aria-label="Tools this department can use">
       {list.map((c) => (
-        <span
-          key={c.id}
-          className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${c.status === "connected" ? "border-ok/30 text-fg" : "border-warn/40 text-warn"}`}
-          title={`${c.name}: ${c.statusDetail}`}
-        >
+        <Pill key={c.id} tone={c.status === "connected" ? "neutral" : "warn"} title={`${c.name}: ${c.statusDetail}`}>
           <DeptIcon name={c.icon} size={11} /> {c.name}
-          {c.status === "connected" ? <Check size={10} className="text-ok" /> : null}
-        </span>
+          {c.status === "connected" ? <Check size={10} className="text-ok" aria-label="Connected" /> : null}
+        </Pill>
       ))}
-      <button
-        className="flex items-center gap-1 rounded-full border border-dashed border-line px-2 py-0.5 text-[11px] text-muted hover:border-faint hover:text-fg"
-        onClick={() => openTab({ kind: "connections" }, "Connections")}
-      >
-        <Cable size={11} /> {list.length ? "Manage tools" : "Connect tools"}
+      <button type="button" className="btn btn-ghost btn-sm" onClick={() => openTab({ kind: "connections" }, "Connections")}>
+        <Cable size={12} /> {list.length ? "Manage tools" : "Connect tools"}
       </button>
     </div>
   );

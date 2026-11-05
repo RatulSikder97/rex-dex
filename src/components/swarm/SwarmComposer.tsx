@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Loader2, Network, X } from "lucide-react";
 import { DeptIcon } from "@/components/icons";
+import { Switch } from "@/components/ui/kit";
 import { useActiveProject, useDepartments } from "@/store/workbench";
 import { createSwarm } from "./api";
 
@@ -49,22 +50,22 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
   const toggle = (id: string) => setDepts((d) => (d.includes(id) ? d.filter((x) => x !== id) : [...d, id]));
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="swarm-composer-title" className="max-h-[92vh] w-[620px] max-w-full overflow-y-auto rounded-xl border border-line bg-elev shadow-2xl">
+    <div className="scrim fixed inset-0 z-40 flex items-center justify-center p-4" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="swarm-composer-title" className="popover max-h-[92vh] w-[620px] max-w-full overflow-y-auto">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             void submit();
           }}
         >
-          <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-            <Network size={15} className="text-accent" />
-            <h2 id="swarm-composer-title" className="text-[13.5px] font-semibold">
-              New agent swarm
+          <div className="flex h-11 items-center gap-2 border-b border-line px-4">
+            <Network size={15} className="text-muted" aria-hidden />
+            <h2 id="swarm-composer-title" className="text-[13px] font-semibold">
+              New swarm
             </h2>
-            {project && <span className="truncate text-[12px] text-muted">· {project.name}</span>}
+            {project && <span className="min-w-0 truncate text-[12px] text-muted" title={project.name}>· {project.name}</span>}
             <span className="flex-1" />
-            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" disabled={busy}>
+            <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" title="Close (Esc)" disabled={busy}>
               <X size={14} />
             </button>
           </div>
@@ -73,7 +74,7 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
             <label className="block">
               <span className="label">Goal</span>
               <textarea
-                className="input !h-auto min-h-[110px] py-1.5 leading-relaxed"
+                className="input min-h-[110px]"
                 placeholder="e.g. Launch a referral program: landing copy, SEO page, email sequence and an explainer video script"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
@@ -82,11 +83,11 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
                 }}
                 autoFocus
               />
-              <span className="mt-1 block text-[11.5px] text-faint">The Chief of Staff splits it into department steps that run in parallel, then merges the results into one deliverable.</span>
+              <span className="help block">The Chief of Staff splits it into department steps, runs them in parallel and merges the results.</span>
             </label>
 
             <fieldset>
-              <legend className="label">Departments {depts.length ? `(${depts.length} selected)` : "(any — the Chief of Staff picks)"}</legend>
+              <legend className="label">Departments {depts.length ? `(${depts.length} selected)` : "(any, the Chief of Staff picks)"}</legend>
               <div className="flex flex-wrap gap-1.5">
                 {specialists.map((d) => {
                   const on = depts.includes(d.id);
@@ -96,7 +97,7 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
                       type="button"
                       aria-pressed={on}
                       onClick={() => toggle(d.id)}
-                      className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors ${on ? "border-accent bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-fg" : "border-line text-muted hover:text-fg"}`}
+                      className={`flex h-6 items-center gap-1.5 rounded-[4px] border px-2 text-[12px] transition-colors ${on ? "border-accent bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-fg" : "border-line text-muted hover:bg-hover hover:text-fg"}`}
                     >
                       <span style={{ color: d.color }}>
                         <DeptIcon name={d.icon} size={12} />
@@ -106,7 +107,7 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
                   );
                 })}
                 {!!depts.length && (
-                  <button type="button" className="px-1 text-[11.5px] text-accent hover:underline" onClick={() => setDepts([])}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDepts([])}>
                     Clear
                   </button>
                 )}
@@ -118,7 +119,7 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
                 <span className="label">Max parallel steps</span>
                 <div className="flex items-center gap-2">
                   <input type="range" min={1} max={6} value={parallel} onChange={(e) => setParallel(Number(e.target.value))} className="flex-1 accent-[var(--accent)]" aria-label="Max parallel steps" />
-                  <span className="w-6 text-right text-[13px] font-semibold tabular-nums">{parallel}</span>
+                  <span className="w-6 text-right text-[13px] font-semibold tabular-nums" aria-hidden>{parallel}</span>
                 </div>
               </label>
               <div className="space-y-2">
@@ -140,13 +141,13 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
           </div>
 
           <div className="flex items-center gap-2 border-t border-line px-4 py-3">
-            <span className="hidden text-[11.5px] text-faint sm:inline">⌘↵ to create</span>
+            <span className="hidden text-[11px] text-faint sm:inline">⌘↵ to create</span>
             <span className="flex-1" />
-            <button type="button" className="btn !h-8 !rounded-lg" onClick={onClose} disabled={busy}>
+            <button type="button" className="btn" onClick={onClose} disabled={busy}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary !h-8 !rounded-lg !px-3" disabled={!goal.trim() || busy}>
-              {busy ? <Loader2 size={13} className="animate-spin" /> : <Network size={13} />} {review ? "Plan swarm" : "Plan & run"}
+            <button type="submit" className="btn btn-primary" disabled={!goal.trim() || busy}>
+              {busy ? <Loader2 size={13} className="animate-spin" /> : <Network size={13} />} {review ? "Plan swarm" : "Plan and run"}
             </button>
           </div>
         </form>
@@ -156,15 +157,16 @@ export default function SwarmComposer({ onClose, initialGoal = "", taskId }: { o
 }
 
 function Toggle({ checked, onChange, label, hint, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
+  const id = useId();
   return (
-    <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)} className="flex w-full items-start gap-2.5 text-left disabled:opacity-50">
-      <span className={`relative mt-0.5 h-[18px] w-8 shrink-0 rounded-full transition-colors ${checked ? "bg-accent" : "bg-line"}`}>
-        <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-[left] ${checked ? "left-[16px]" : "left-[2px]"}`} />
+    <div className={`flex items-start gap-2.5 ${disabled ? "opacity-60" : ""}`}>
+      <span className="mt-0.5">
+        <Switch id={id} checked={checked} onChange={onChange} label={label} disabled={disabled} />
       </span>
-      <span className="min-w-0">
+      <label htmlFor={id} className="min-w-0">
         <span className="block text-[12.5px]">{label}</span>
-        {hint && <span className="block text-[11.5px] leading-snug text-faint">{hint}</span>}
-      </span>
-    </button>
+        {hint && <span className="block text-[11.5px] leading-snug text-muted">{hint}</span>}
+      </label>
+    </div>
   );
 }

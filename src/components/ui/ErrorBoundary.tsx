@@ -47,6 +47,25 @@ function saveReport(text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Crash loop escape hatch: drop persisted tabs/pages (the usual culprit), keep project + preferences, reload. */
+function resetLayout() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("rex-workbench") ?? "null") as { state?: Record<string, unknown> } | null;
+    if (raw?.state) {
+      raw.state.tabs = [];
+      raw.state.activeTabId = null;
+      localStorage.setItem("rex-workbench", JSON.stringify(raw));
+    }
+  } catch {
+    try {
+      localStorage.removeItem("rex-workbench");
+    } catch {
+      /* storage unavailable: reload anyway */
+    }
+  }
+  location.reload();
+}
+
 /** Full-window recoverable crash screen (top-level boundary, app/error.tsx, app/global-error.tsx). */
 export function CrashScreen({ error, onRetry, where = "workbench" }: { error: unknown; onRetry?: () => void; where?: string }) {
   const [copied, copy] = useCopy();
@@ -66,7 +85,7 @@ export function CrashScreen({ error, onRetry, where = "workbench" }: { error: un
             </p>
           </div>
         </div>
-        <pre className="mt-4 max-h-[180px] overflow-auto rounded-[6px] border border-line bg-side px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted">{errorMessage(error)}</pre>
+        <pre className="mt-4 max-h-[180px] overflow-auto whitespace-pre-wrap break-words rounded-[6px] border border-line bg-side px-3 py-2 font-mono text-[11.5px] leading-relaxed text-muted">{errorMessage(error)}</pre>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button className="btn btn-primary" onClick={() => location.reload()} autoFocus>
             <RotateCw size={13} /> Reload REX
@@ -76,6 +95,9 @@ export function CrashScreen({ error, onRetry, where = "workbench" }: { error: un
               Try again
             </button>
           )}
+          <button className="btn btn-ghost" onClick={resetLayout} title="Close all open tabs and pages, then reload. Projects and tasks are kept.">
+            Reset layout
+          </button>
           <span className="flex-1" />
           <button className="btn btn-ghost" onClick={() => copy(report)}>
             {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "Copied" : "Copy error"}

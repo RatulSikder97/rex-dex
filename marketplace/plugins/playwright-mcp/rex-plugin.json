@@ -1,6 +1,6 @@
 {
   "id": "playwright-mcp",
-  "name": "Browser Automation (Playwright MCP)",
+  "name": "Browser Automation",
   "version": "1.0.0",
   "description": "Lets Claude Code and Codex agents drive a real browser: end-to-end QA of your app, competitor research, SERP checks, and screenshot capture.",
   "author": "REX",

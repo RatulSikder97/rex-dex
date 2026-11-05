@@ -215,25 +215,19 @@ function PickerDialog() {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center bg-black/20 pt-[10vh]" onMouseDown={close}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Select color theme"
-        className="h-fit w-[560px] max-w-[92vw] overflow-hidden rounded-lg border border-line bg-elev shadow-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="relative border-b border-line">
-          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" aria-hidden />
+    <div className="fixed inset-0 z-50 flex justify-center px-4 pt-[44px]" onMouseDown={close}>
+      <div role="dialog" aria-modal="true" aria-label="Select color theme" className="popover h-fit w-[560px] max-w-full overflow-hidden" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="relative p-1.5">
+          <Search size={14} className="pointer-events-none absolute left-[15px] top-1/2 -translate-y-1/2 text-faint" aria-hidden />
           <input
             autoFocus
             role="combobox"
             aria-expanded="true"
             aria-controls="theme-list"
             aria-activedescendant={`theme-opt-${idx}`}
-            className="h-10 w-full bg-transparent pl-9 pr-4 text-[13px]"
-            style={{ outline: "none" }}
-            placeholder="Select Color Theme (↑↓ to preview)"
+            aria-label="Color theme"
+            className="input !h-8 !pl-7 !text-[13px]"
+            placeholder="Select a color theme (↑↓ to preview)"
             value={q}
             onChange={(e) => {
               setQ(e.target.value);
@@ -249,10 +243,10 @@ function PickerDialog() {
             }}
           />
         </div>
-        <div ref={list} id="theme-list" role="listbox" aria-label="Color themes" className="max-h-[56vh] overflow-y-auto py-1">
+        <div ref={list} id="theme-list" role="listbox" aria-label="Color themes" className="max-h-[min(56vh,440px)] overflow-y-auto pb-1">
           {rows.map((r) =>
             "heading" in r ? (
-              <div key={`h-${r.heading}`} role="presentation" className="px-4 pb-0.5 pt-2 text-[10.5px] font-semibold uppercase tracking-wider text-faint">
+              <div key={`h-${r.heading}`} role="presentation" className="section-title flex h-[24px] items-end px-3 pb-1 !text-faint">
                 {r.heading}
               </div>
             ) : (
@@ -264,7 +258,7 @@ function PickerDialog() {
                 aria-selected={r.i === idx}
                 onMouseMove={() => r.i !== idx && setIdx(r.i)}
                 onClick={() => choose(r.i)}
-                className={`flex h-[30px] cursor-pointer items-center gap-3 px-4 ${r.i === idx ? "bg-active" : ""}`}
+                className={`mx-1.5 flex h-[26px] items-center gap-2.5 rounded-[4px] px-1.5 text-[13px] ${r.i === idx ? "bg-active" : ""}`}
               >
                 <ThemeSwatches colors={r.c.colors} />
                 <span className="min-w-0 flex-1 truncate">
@@ -276,7 +270,7 @@ function PickerDialog() {
               </div>
             ),
           )}
-          {!items.length && <div className="px-4 py-2 text-muted">No installed theme matches “{q}”.</div>}
+          {!items.length && <div className="px-3 py-2 text-[12.5px] text-muted">No installed theme matches “{q}”.</div>}
           <div className="mx-3 my-1 border-t border-line" role="presentation" />
           <div
             id={`theme-opt-${browseIdx}`}
@@ -285,12 +279,12 @@ function PickerDialog() {
             aria-selected={idx === browseIdx}
             onMouseMove={() => idx !== browseIdx && setIdx(browseIdx)}
             onClick={() => choose(browseIdx)}
-            className={`flex h-[30px] cursor-pointer items-center gap-3 px-4 text-accent ${idx === browseIdx ? "bg-active" : ""}`}
+            className={`mx-1.5 flex h-[26px] items-center gap-2.5 rounded-[4px] px-1.5 text-[13px] text-accent ${idx === browseIdx ? "bg-active" : ""}`}
           >
-            <Palette size={14} /> Browse more themes…
+            <Palette size={14} aria-hidden /> Browse more themes…
           </div>
         </div>
-        <div className="flex items-center gap-3 border-t border-line px-4 py-1.5 text-[11px] text-faint">
+        <div className="flex h-[28px] items-center gap-3 border-t border-line px-3 text-[11px] text-faint">
           <span>
             <span className="kbd">↑↓</span> preview
           </span>

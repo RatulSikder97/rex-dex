@@ -1,10 +1,10 @@
 "use client";
 import { Activity, AlertOctagon, AlertTriangle, Boxes, CircleCheckBig, ExternalLink, GitBranch, Server as ServerIcon, Ship, Stethoscope } from "lucide-react";
 import { timeAgo } from "@/lib/client";
-import type { OpsOverview, ServerWithLast } from "@/lib/opsTypes";
-import { EmptyState } from "@/components/ui/empty";
+import type { OpsOverview, OpsSection, ServerWithLast } from "@/lib/opsTypes";
+import { EmptyState, Skeleton } from "@/components/ui/empty";
 import { useActiveProject } from "@/store/workbench";
-import { Card, Dot, ErrorBox, LoadingGrid, Pill, handOff, pct, useOpsFetch, type OpsNav, type Tone, asSection } from "./shared";
+import { Card, Dot, ErrorBox, LoadingGrid, Pill, Sentence, friendlyError, handOff, pct, useOpsFetch, type OpsNav, type Tone, asSection } from "./shared";
 import { runTone } from "./GitSection";
 
 export function serverHealth(s: ServerWithLast): { tone: Tone; label: string } {
@@ -75,10 +75,16 @@ function summarize(o: OpsOverview, project: string): string {
 export default function OverviewSection({ nav }: { nav: OpsNav }) {
   const project = useActiveProject();
   const url = `/api/ops/overview${nav.projectId ? `?projectId=${encodeURIComponent(nav.projectId)}` : ""}`;
-  const { data: o, error, loading } = useOpsFetch<OpsOverview>(url, nav.reloadKey);
+  const { data: o, error, loading, reload } = useOpsFetch<OpsOverview>(url, nav.reloadKey);
 
-  if (!o && error) return <ErrorBox title="Couldn't load the ops overview">{error}</ErrorBox>;
-  if (!o) return <LoadingGrid n={6} />;
+  if (!o && error) return <ErrorBox title="Couldn't load the ops overview" error={error} onRetry={() => void reload()} />;
+  if (!o)
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-14 !rounded-[6px]" />
+        <LoadingGrid n={4} h="h-36" />
+      </div>
+    );
 
   const name = project?.name ?? "this workspace";
   const diagnose = () =>
@@ -89,75 +95,109 @@ export default function OverviewSection({ nav }: { nav: OpsNav }) {
   const up = o.monitors.filter((m) => m.last?.ok).length;
   const down = o.monitors.filter((m) => m.last && !m.last.ok).length;
   const errors = o.problems.filter((p) => p.severity === "error").length;
+  const nothing = !o.servers.length && !o.monitors.length && !g;
+
+  const srvTones = o.servers.map((s) => serverHealth(s).tone);
+  const srvPill: { tone: Tone; label: string } = !o.servers.length
+    ? { tone: "muted", label: "None" }
+    : srvTones.includes("err")
+      ? { tone: "err", label: "Problems" }
+      : srvTones.includes("warn")
+        ? { tone: "warn", label: "Under pressure" }
+        : srvTones.every((t) => t === "muted")
+          ? { tone: "muted", label: "No snapshots" }
+          : { tone: "ok", label: "Healthy" };
+  const docker = o.docker.available ? null : friendlyError(o.docker.error, "Docker isn't available on this Mac.");
+  const k8s = o.k8s.available ? null : friendlyError(o.k8s.error, "kubectl isn't available or no cluster is configured.");
 
   return (
     <div className="space-y-4" aria-busy={loading}>
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-elev/30 p-3.5">
-        <span className={errors ? "text-err" : o.problems.length ? "text-warn" : "text-ok"}>{o.problems.length ? <AlertTriangle size={18} /> : <CircleCheckBig size={18} />}</span>
-        <div className="min-w-[200px] flex-1">
-          <div className="text-[13.5px] font-semibold">{o.problems.length ? `${o.problems.length} ${o.problems.length === 1 ? "problem needs" : "problems need"} attention` : "Everything looks healthy"}</div>
+      <section className="card flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5" aria-label="Status">
+        <span className={errors ? "text-err" : o.problems.length ? "text-warn" : "text-ok"} aria-hidden>
+          {o.problems.length ? <AlertTriangle size={16} /> : <CircleCheckBig size={16} />}
+        </span>
+        <div className="min-w-[180px] flex-1">
+          <div className="text-[13px] font-semibold">{o.problems.length ? `${o.problems.length} ${o.problems.length === 1 ? "problem needs" : "problems need"} attention` : "Everything looks healthy"}</div>
           <div className="text-[12px] text-muted">Hand the full snapshot to QA &amp; DevOps for a ranked review with fix commands.</div>
         </div>
-        <button className="btn btn-primary h-8" onClick={diagnose}>
-          <Stethoscope size={13} /> Diagnose with QA &amp; DevOps
+        <button className="btn btn-primary btn-sm" onClick={diagnose}>
+          <Stethoscope size={12} aria-hidden /> Diagnose with QA &amp; DevOps
         </button>
-      </div>
+      </section>
 
       {!!o.problems.length && (
-        <ul className="space-y-1.5" aria-label="Problems">
-          {o.problems.map((p, i) => (
-            <li key={i}>
-              <button
-                className="flex w-full items-start gap-2.5 rounded-lg border border-line bg-elev/20 px-3 py-2 text-left hover:bg-elev/50"
-                onClick={() => nav.go(asSection(p.section))}
-              >
-                {p.severity === "error" ? <AlertOctagon size={14} className="mt-0.5 shrink-0 text-err" /> : <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warn" />}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[12.5px] font-medium">{p.title}</span>
-                  <span className="block break-words text-[11.5px] text-muted">{p.detail}</span>
-                </span>
-                <span className="shrink-0 text-[11px] text-faint">{p.section}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <Card title="Problems" icon={<AlertTriangle size={13} />} action={<span className="count">{o.problems.length}</span>} flush>
+          <ul aria-label="Problems" className="py-1">
+            {o.problems.map((p, i) => {
+              const f = friendlyError(p.detail, "");
+              return (
+                <li key={i}>
+                  <button className="flex w-full items-start gap-2 px-3 py-1.5 text-left hover:bg-hover" onClick={() => nav.go(asSection(p.section))} title={f.raw ?? p.detail}>
+                    {p.severity === "error" ? <AlertOctagon size={13} className="mt-0.5 shrink-0 text-err" aria-label="Error" /> : <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" aria-label="Warning" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px]">{p.title}</span>
+                      {f.text && (
+                        <span className="block truncate text-[12px] text-muted">
+                          <Sentence text={f.text} />
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 shrink-0 text-[11px] text-faint">{SECTION_LABEL[asSection(p.section)]}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
 
+      {nothing ? (
+        <Card>
+          <EmptyState icon={ServerIcon} title="Nothing to watch yet" hint="Add a server to see health and traffic, or a monitor to check your site every minute." action={{ label: "Add server", onClick: () => nav.go("servers") }} secondary={{ label: "Add monitor", onClick: () => nav.go("uptime") }} />
+        </Card>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2 @5xl:grid-cols-3">
-        <Card title="Git" icon={<GitBranch size={14} />} onClick={() => nav.go("git")} action={web ? <ExternalLink size={12} className="text-faint" /> : undefined}>
+        <Card
+          title="Git"
+          icon={<GitBranch size={13} />}
+          onClick={() => nav.go("git")}
+          action={!g ? <Pill tone="muted">No repository</Pill> : g.behind > 0 ? <Pill tone="warn">{g.behind} behind</Pill> : g.ahead > 0 ? <Pill tone="accent">{g.ahead} ahead</Pill> : <Pill tone="ok">In sync</Pill>}
+        >
           {!g ? (
             <p className="text-[12px] text-muted">No git repository for this project.</p>
           ) : (
             <div className="space-y-1.5 text-[12px]">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[12px] font-medium">{g.branch ?? "detached HEAD"}</span>
-                {g.ahead > 0 && <Pill tone="accent">↑{g.ahead} ahead</Pill>}
-                {g.behind > 0 && <Pill tone="warn">↓{g.behind} behind</Pill>}
-                {!g.ahead && !g.behind && <Pill tone="muted">in sync</Pill>}
+              <div className="flex min-w-0 items-center gap-2">
+                <GitBranch size={12} className="shrink-0 text-faint" aria-hidden />
+                <span className="truncate font-mono text-[12px]">{g.branch ?? "detached HEAD"}</span>
               </div>
               {web && (
-                <a href={web} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="block truncate text-accent hover:underline">
-                  {web.replace(/^https?:\/\//, "")}
+                <a href={web} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex min-w-0 items-center gap-1 text-accent hover:underline" title={web}>
+                  <span className="truncate">{web.replace(/^https?:\/\//, "")}</span>
+                  <ExternalLink size={11} className="shrink-0" aria-hidden />
                 </a>
               )}
-              <div className="flex items-center gap-2 text-muted">
-                CI:{" "}
+              <div className="flex min-w-0 items-center gap-2 text-muted">
+                <span className="shrink-0">CI</span>
                 {run ? (
                   <>
                     <Pill tone={runTone(run)}>{run.conclusion ?? run.status}</Pill>
-                    <span className="truncate">{run.name}</span>
+                    <span className="truncate" title={run.name}>
+                      {run.name}
+                    </span>
                   </>
                 ) : (
-                  <span className="text-faint">{g.gh.available ? "no runs" : "gh not set up"}</span>
+                  <span className="text-faint">{g.gh.available ? "No runs" : "GitHub CLI not set up"}</span>
                 )}
               </div>
             </div>
           )}
         </Card>
 
-        <Card title={`Servers${o.servers.length ? ` · ${o.servers.length}` : ""}`} icon={<ServerIcon size={14} />} onClick={() => nav.go("servers")}>
+        <Card title="Servers" icon={<ServerIcon size={13} />} onClick={() => nav.go("servers")} action={<Pill tone={srvPill.tone}>{o.servers.length ? `${o.servers.length} · ${srvPill.label}` : srvPill.label}</Pill>}>
           {!o.servers.length ? (
-            <p className="text-[12px] text-muted">No servers yet. Add one over SSH to see health, who&apos;s logged in and traffic.</p>
+            <p className="text-[12px] text-muted">Add one over SSH to see health, who&apos;s logged in and traffic.</p>
           ) : (
             <ul className="space-y-2">
               {o.servers.slice(0, 5).map((s) => {
@@ -168,18 +208,22 @@ export default function OverviewSection({ nav }: { nav: OpsNav }) {
                   <li key={s.id} className="text-[12px]">
                     <div className="flex items-center gap-2">
                       <Dot tone={h.tone} label={h.label} />
-                      <span className="min-w-0 flex-1 truncate font-medium">{s.name}</span>
-                      <span className="shrink-0 text-[11px] text-faint">{s.last ? timeAgo(s.last.at) : "never"}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium" title={s.name}>
+                        {s.name}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-faint">{s.last ? timeAgo(s.last.at) : "Never"}</span>
                     </div>
                     {sys ? (
-                      <div className="ml-4 mt-0.5 flex flex-wrap gap-x-3 text-[11.5px] tabular-nums text-muted">
+                      <div className="ml-3.5 mt-0.5 flex flex-wrap gap-x-3 text-[11.5px] tabular-nums text-muted">
                         <span>load {sys.load[0].toFixed(2)}/{sys.cpus}</span>
                         <span>mem {pct(sys.mem.usedMb, sys.mem.totalMb)}%</span>
                         <span className={disk != null && disk >= 90 ? "text-err" : ""}>disk {disk}%</span>
                         {s.last?.connections && <span>{s.last.connections.established} conns</span>}
                       </div>
                     ) : (
-                      <div className="ml-4 mt-0.5 truncate text-[11.5px] text-muted">{s.last?.error ?? h.label}</div>
+                      <div className="ml-3.5 mt-0.5 truncate text-[11.5px] text-muted" title={s.last?.error ?? undefined}>
+                        {s.last?.error ? <Sentence text={friendlyError(s.last.error).text} /> : h.label}
+                      </div>
                     )}
                   </li>
                 );
@@ -188,55 +232,68 @@ export default function OverviewSection({ nav }: { nav: OpsNav }) {
           )}
         </Card>
 
-        <Card title={`Uptime${o.monitors.length ? ` · ${up}/${o.monitors.length} up` : ""}`} icon={<Activity size={14} />} onClick={() => nav.go("uptime")}>
+        <Card
+          title="Uptime"
+          icon={<Activity size={13} />}
+          onClick={() => nav.go("uptime")}
+          action={!o.monitors.length ? <Pill tone="muted">None</Pill> : down ? <Pill tone="err">{down} down</Pill> : <Pill tone={up ? "ok" : "muted"}>{up}/{o.monitors.length} up</Pill>}
+        >
           {!o.monitors.length ? (
-            <p className="text-[12px] text-muted">No monitors. Add your website to get checked every minute.</p>
+            <p className="text-[12px] text-muted">Add your website to get it checked every minute.</p>
           ) : (
             <ul className="space-y-1.5">
               {o.monitors.slice(0, 5).map((m) => (
                 <li key={m.id} className="flex items-center gap-2 text-[12px]">
                   <Dot tone={!m.last ? "muted" : m.last.ok ? "ok" : "err"} label={!m.last ? "Not checked" : m.last.ok ? "Up" : "Down"} />
-                  <span className="min-w-0 flex-1 truncate">{m.name}</span>
+                  <span className="min-w-0 flex-1 truncate" title={m.url}>
+                    {m.name}
+                  </span>
                   <span className="shrink-0 tabular-nums text-muted">{m.last?.ms != null ? `${m.last.ms} ms` : "—"}</span>
                   <span className="w-14 shrink-0 text-right tabular-nums text-faint">{m.uptime24h != null ? `${m.uptime24h.toFixed(1)}%` : ""}</span>
                 </li>
               ))}
-              {down > 0 && <li className="text-[11.5px] font-medium text-err">{down} down</li>}
             </ul>
           )}
         </Card>
 
-        <Card title="Docker" icon={<Boxes size={14} />} onClick={() => nav.go("docker")}>
+        <Card title="Docker" icon={<Boxes size={13} />} onClick={() => nav.go("docker")} action={o.docker.available ? <Pill tone={o.docker.running ? "ok" : "muted"}>{o.docker.running} running</Pill> : <Pill tone="warn">Not running</Pill>}>
           {o.docker.available ? (
             <div className="text-[12px]">
-              <span className="text-[17px] font-semibold tabular-nums">{o.docker.running}</span>
-              <span className="text-muted"> / {o.docker.total} containers running on this Mac</span>
+              <span className="text-[15px] font-semibold tabular-nums">{o.docker.running}</span>
+              <span className="text-muted"> of {o.docker.total} containers running on this Mac</span>
             </div>
           ) : (
-            <p className="text-[12px] text-muted">{o.docker.error ?? "Docker isn't available on this Mac."}</p>
+            <p className="text-[12px] text-muted" title={docker?.raw ?? undefined}>
+              <Sentence text={docker!.text} />
+            </p>
           )}
         </Card>
 
-        <Card title="Kubernetes" icon={<Ship size={14} />} onClick={() => nav.go("k8s")}>
+        <Card
+          title="Kubernetes"
+          icon={<Ship size={13} />}
+          onClick={() => nav.go("k8s")}
+          action={o.k8s.available ? <Pill tone={o.k8s.podsFailing ? "err" : "ok"}>{o.k8s.podsFailing ? `${o.k8s.podsFailing} failing` : "Healthy"}</Pill> : <Pill tone="muted">Not set up</Pill>}
+        >
           {o.k8s.available ? (
             <div className="space-y-1 text-[12px]">
-              <div className="truncate font-mono text-[11.5px] text-muted">{o.k8s.context ?? "no context"}</div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span>
-                  <b className="text-[17px] tabular-nums">{o.k8s.podsRunning}</b>
-                  <span className="text-muted"> / {o.k8s.podsTotal} pods running</span>
-                </span>
-                {o.k8s.podsFailing > 0 && <Pill tone="err">{o.k8s.podsFailing} failing</Pill>}
+              <div className="truncate font-mono text-[11.5px] text-muted" title={o.k8s.context ?? undefined}>
+                {o.k8s.context ?? "No context"}
+              </div>
+              <div>
+                <span className="text-[15px] font-semibold tabular-nums">{o.k8s.podsRunning}</span>
+                <span className="text-muted"> of {o.k8s.podsTotal} pods running</span>
               </div>
             </div>
           ) : (
-            <p className="break-words text-[12px] text-muted">{o.k8s.error ?? "kubectl isn't available or no cluster is configured."}</p>
+            <p className="text-[12px] text-muted" title={k8s?.raw ?? undefined}>
+              <Sentence text={k8s!.text} />
+            </p>
           )}
         </Card>
       </div>
-      {!o.servers.length && !o.monitors.length && !g && (
-        <EmptyState icon={ServerIcon} title="Nothing to watch yet" hint="Add a server or an uptime monitor to start." action={{ label: "Add server", onClick: () => nav.go("servers") }} secondary={{ label: "Add monitor", onClick: () => nav.go("uptime") }} />
-      )}
     </div>
   );
 }
+
+const SECTION_LABEL: Record<OpsSection, string> = { overview: "Overview", servers: "Servers", traffic: "Traffic", docker: "Docker", k8s: "Kubernetes", uptime: "Uptime", git: "Git" };

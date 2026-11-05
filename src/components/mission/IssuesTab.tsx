@@ -33,6 +33,7 @@ import { briefTitle, useMissionData } from "./data";
 import { focusConversation, openInCodeMode, openPage, showWorkspace } from "./nav";
 import { openSwarm, stepAction, swarmTitle, useSwarms } from "@/components/swarm/api";
 import { DeptAvatar, PanelEmpty } from "./ui";
+import { LoadingRows, Pill } from "@/components/ui/kit";
 
 type Severity = "error" | "warn" | "info";
 
@@ -342,111 +343,121 @@ export function useIssues(): Issue[] {
   }, [runs, tasks, plugins, git, logs, dismissed, providers, project, opsProblems, swarms]);
 }
 
-const SEV: Record<Severity, { color: string; label: string; group: string }> = {
-  error: { color: "var(--err)", label: "Error", group: "Needs action" },
-  warn: { color: "var(--warn)", label: "Warning", group: "Worth a look" },
-  info: { color: "var(--accent)", label: "Info", group: "Info" },
+const SEV: Record<Severity, { color: string; label: string; group: string; tone: "err" | "warn" | "accent" }> = {
+  error: { color: "var(--err)", label: "Error", group: "Needs action", tone: "err" },
+  warn: { color: "var(--warn)", label: "Warning", group: "Worth a look", tone: "warn" },
+  info: { color: "var(--accent)", label: "Info", group: "Info", tone: "accent" },
 };
 
 /** Issues: failed runs, missing agents, tasks needing attention, extension/repo problems — grouped by severity, each with a fix. */
 export default function IssuesTab() {
   const issues = useIssues();
+  const { loaded } = useMissionData();
   const [busy, setBusy] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const { getDepartment } = useDepartments();
 
+  if (!loaded && !issues.length)
+    return (
+      <div className="px-4 pt-3">
+        <div className="skeleton mb-4 h-6 w-64 max-w-full" aria-hidden />
+        <LoadingRows rows={4} height={44} />
+      </div>
+    );
   if (!issues.length) return <PanelEmpty icon={CircleCheckBig} title="All clear" hint="Failed runs, missing agents, reviews, urgent tasks, repo and ops problems show up here with a one-click fix." />;
 
   const groups = (["error", "warn", "info"] as Severity[]).map((sev) => ({ sev, list: issues.filter((i) => i.severity === sev) })).filter((g) => g.list.length);
+  const run = async (key: string, a: IssueAction) => {
+    setBusy(key);
+    try {
+      await a.run();
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
-    <div className="space-y-6 px-4 pb-6 pt-4">
-      <div className="rx-card rx-in flex items-center gap-1 p-1">
+    <div className="@container space-y-5 px-4 pb-6 pt-3">
+      <nav aria-label="Issue summary" className="-mx-1.5 flex flex-wrap items-center gap-1">
         {(["error", "warn", "info"] as Severity[]).map((sev) => {
           const n = issues.filter((i) => i.severity === sev).length;
           return (
-            <a
+            <button
               key={sev}
-              href={`#issues-${sev}`}
-              onClick={(e) => {
-                e.preventDefault();
+              type="button"
+              disabled={!n}
+              onClick={() => {
                 if (sev === "info") setShowInfo(true);
                 requestAnimationFrame(() => document.getElementById(`issues-${sev}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
               }}
-              className={`rx-press flex min-w-0 flex-1 items-center gap-2 rounded-[8px] px-2.5 py-2 hover:bg-hover ${n ? "" : "pointer-events-none opacity-50"}`}
+              className="flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-[12px] text-muted hover:bg-hover hover:text-fg disabled:hover:bg-transparent"
             >
-              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SEV[sev].color }} aria-hidden />
-              <span className="text-[16px] font-semibold leading-none tabular-nums" style={{ color: n ? SEV[sev].color : "var(--fg-faint)" }}>
-                {n}
-              </span>
-              <span className="truncate text-[11px] text-muted">{SEV[sev].group}</span>
-            </a>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: n ? SEV[sev].color : "var(--fg-faint)" }} aria-hidden />
+              {SEV[sev].group}
+              <span className={`font-semibold tabular-nums ${n ? "text-fg" : "text-faint"}`}>{n}</span>
+            </button>
           );
         })}
-      </div>
+      </nav>
       {groups.map(({ sev, list }) => {
         const collapsed = sev === "info" && !showInfo && groups.length > 1;
         return (
           <section key={sev} id={`issues-${sev}`} aria-label={SEV[sev].group} className="scroll-mt-3">
-            <header className="mb-2 flex h-6 items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: SEV[sev].color }} aria-hidden />
-              <h3 className="rx-label">{SEV[sev].group}</h3>
-              <span className="text-[10.5px] font-semibold tabular-nums text-faint">{list.length}</span>
+            <header className="flex h-6 items-center gap-2">
+              <h3 className="section-title">{SEV[sev].group}</h3>
+              <span className="count">{list.length}</span>
               <span className="flex-1" />
               {sev === "info" && groups.length > 1 && (
-                <button className="rx-press flex h-6 items-center rounded-md px-1.5 text-[11.5px] text-muted hover:bg-hover hover:text-fg" onClick={() => setShowInfo((v) => !v)} aria-expanded={!collapsed}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowInfo((v) => !v)} aria-expanded={!collapsed}>
                   {collapsed ? "Show" : "Hide"}
                 </button>
               )}
             </header>
             {!collapsed && (
-              <ul className="space-y-2">
-                {list.map((i, idx) => {
+              <ul className="-mx-4 mt-1 border-t border-line">
+                {list.map((i) => {
                   const sevm = SEV[i.severity];
                   const d = i.dept ? getDepartment(i.dept) : null;
+                  const mono = i.group === "Runs" || i.group === "Swarms" || i.group === "Extensions";
                   return (
-                    <li key={i.id} className="rx-card rx-in group relative overflow-hidden py-3 pl-4 pr-3" style={{ ["--i" as string]: Math.min(idx, 8) }}>
-                      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: sevm.color }} aria-label={sevm.label} />
-                      <div className="flex items-start gap-3">
+                    <li key={i.id} className="group border-b border-line px-4 py-2 hover:bg-[color:color-mix(in_srgb,var(--bg-hover)_50%,transparent)]">
+                      <div className="flex min-h-6 items-center gap-2.5">
                         {d ? (
-                          <DeptAvatar dept={d} size={26} />
+                          <DeptAvatar dept={d} size={20} />
                         ) : (
-                          <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[30%]" style={{ color: sevm.color, background: `color-mix(in srgb, ${sevm.color} 14%, transparent)` }}>
-                            <i.icon size={13} />
+                          <span className="grid h-5 w-5 shrink-0 place-items-center rounded-[6px]" style={{ color: sevm.color, background: `color-mix(in srgb, ${sevm.color} 14%, transparent)` }} aria-hidden>
+                            <i.icon size={12} />
                           </span>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <span className="min-w-0 flex-1 text-[12.5px] font-medium leading-snug">{i.title}</span>
-                            {i.at && <span className="shrink-0 text-[11px] text-faint">{timeAgo(i.at)}</span>}
-                          </div>
-                          <div className="mt-0.5 text-[10.5px] text-faint">{i.group}</div>
-                          {i.detail && <p className={`mt-1.5 line-clamp-3 whitespace-pre-wrap break-words leading-relaxed text-muted ${i.group === "Runs" || i.group === "Swarms" || i.group === "Extensions" ? "rounded-md bg-editor px-2 py-1.5 font-mono text-[11px]" : "text-[12px]"}`}>{i.detail}</p>}
-                          {!!i.actions.length && (
-                            <div className="mt-2.5 flex flex-wrap gap-1.5">
-                              {i.actions.map((a) => (
-                                <button
-                                  key={a.label}
-                                  disabled={busy === `${i.id}:${a.label}`}
-                                  className={`rx-press h-7 rounded-lg px-2.5 text-[11.5px] ${a.primary ? "rx-primary" : "inline-flex items-center gap-1.5 border border-line bg-panel text-fg hover:bg-hover"}`}
-                                  onClick={async () => {
-                                    setBusy(`${i.id}:${a.label}`);
-                                    try {
-                                      await a.run();
-                                    } finally {
-                                      setBusy(null);
-                                    }
-                                  }}
-                                >
-                                  <a.icon size={12} /> {a.label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <button className="icon-btn shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" aria-label="Dismiss" title="Dismiss" onClick={() => dismiss(i.id)}>
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium" title={i.title}>
+                          {i.title}
+                        </span>
+                        <Pill tone={sevm.tone} className="shrink-0">
+                          {sevm.label}
+                        </Pill>
+                        <span className="hidden w-14 shrink-0 text-right text-[11px] text-faint @md:inline">{i.at ? timeAgo(i.at) : i.group}</span>
+                        <button type="button" className="icon-btn shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" aria-label={`Dismiss: ${i.title}`} title="Dismiss" onClick={() => dismiss(i.id)}>
                           <X size={13} />
                         </button>
+                      </div>
+                      <div className="pl-[30px] pr-8">
+                        {i.detail && (
+                          <p className={`mt-1 line-clamp-2 whitespace-pre-wrap break-words leading-relaxed text-muted ${mono ? "font-mono text-[11.5px]" : "text-[12px]"}`} title={i.detail}>
+                            {i.detail}
+                          </p>
+                        )}
+                        {!!i.actions.length && (
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {i.actions.map((a) => {
+                              const key = `${i.id}:${a.label}`;
+                              return (
+                                <button key={a.label} type="button" disabled={busy === key} className={`btn btn-sm ${a.primary ? "" : "btn-ghost"}`} onClick={() => void run(key, a)}>
+                                  <a.icon size={12} /> {a.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </li>
                   );

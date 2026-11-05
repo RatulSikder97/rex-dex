@@ -23,7 +23,7 @@ export default function CodeTab() {
   if (!project.repo_path)
     return (
       <PanelEmpty icon={FolderGit2} title="No repository linked" hint="Link the project folder so Engineering and QA can work in it, and browse the code here.">
-        <button className="rx-primary rx-press h-8 rounded-lg px-3 text-[12px]" onClick={() => openProjectSettings(project.id)}>
+        <button type="button" className="btn btn-primary" onClick={() => openProjectSettings(project.id)}>
           <FolderGit2 size={13} /> Link repo
         </button>
       </PanelEmpty>
@@ -35,15 +35,17 @@ export default function CodeTab() {
 
   return (
     <div className="flex h-full min-h-0">
-      <div className="w-[220px] shrink-0 overflow-y-auto border-r border-line bg-side py-1" aria-label="Files">
-        <Explorer projectId={project.id} />
+      <div className="no-x-scroll w-[200px] shrink-0 overflow-y-auto border-r border-line bg-side py-1" aria-label="Files">
+        <Explorer projectId={project.id} title={project.name} rootPath={project.repo_path} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
+      <div className="@container flex min-w-0 flex-1 flex-col">
+        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-line pl-3 pr-2">
           <FileCode size={14} className="shrink-0 text-faint" />
-          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted">{spec ? spec.path : "Pick a file to preview"}</span>
-          <button className="btn btn-ghost !h-7 !rounded-lg" onClick={() => openInCodeMode()} title="Open the full IDE">
-            <Code2 size={13} /> Open in Code mode
+          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted" title={spec?.path}>
+            {spec ? spec.path : "Pick a file to preview"}
+          </span>
+          <button type="button" className="btn btn-ghost btn-sm shrink-0" onClick={() => openInCodeMode()} title="Open in Code mode (⌘⇧M)" aria-label="Open in Code mode">
+            <Code2 size={13} /> <span className="@max-xs:hidden">Open in Code mode</span>
           </button>
         </div>
         <div className="min-h-0 flex-1">

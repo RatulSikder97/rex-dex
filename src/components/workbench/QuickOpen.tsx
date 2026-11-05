@@ -112,17 +112,23 @@ export default function QuickOpen({ onClose }: { onClose: () => void }) {
 
   let hint: string | null = null;
   if (!project) hint = "Select a project to search its files.";
-  else if (!hasRepo) hint = "This project has no repository linked. Set a repo path in project settings.";
+  else if (!hasRepo) hint = "This project has no repository linked. Link its folder in project settings.";
   else if (error) hint = error;
   else if (!files) hint = "Indexing files…";
   else if (!results.length) hint = "No matching files.";
 
   return (
     <div>
+      <div className="p-1.5">
       <input
         autoFocus
-        className="h-10 w-full border-b border-line bg-transparent px-4 text-[13px] outline-none"
-        placeholder={project ? `Search files in ${project.name} by name…` : "Search files by name…"}
+        role="combobox"
+        aria-expanded="true"
+        aria-controls="quickopen-list"
+        aria-activedescendant={!hint && results[idx] ? `qo-${idx}` : undefined}
+        aria-label="File name"
+        className="input !h-8 !text-[13px]"
+        placeholder={project ? `Search files in ${project.name} by name` : "Search files by name"}
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -144,9 +150,12 @@ export default function QuickOpen({ onClose }: { onClose: () => void }) {
           }
         }}
       />
-      <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
+      </div>
+      <div ref={listRef} id="quickopen-list" role="listbox" aria-label="Files" className="max-h-[min(50vh,440px)] overflow-y-auto pb-1.5">
         {hint ? (
-          <div className="px-4 py-3 text-[12px] text-muted">{hint}</div>
+          <div className="px-3 py-2 text-[12.5px] text-muted" role="status">
+            {hint}
+          </div>
         ) : (
           results.map((r, i) => {
             const slash = r.path.lastIndexOf("/");
@@ -156,17 +165,21 @@ export default function QuickOpen({ onClose }: { onClose: () => void }) {
             return (
               <div
                 key={r.path}
+                id={`qo-${i}`}
                 data-idx={i}
+                role="option"
+                aria-selected={i === idx}
+                title={r.path}
                 onMouseMove={() => i !== idx && setIdx(i)}
                 onClick={() => open(r)}
-                className={`flex h-[24px] cursor-pointer items-center gap-2 px-4 text-[12.5px] ${i === idx ? "bg-active text-fg" : "text-fg"}`}
+                className={`mx-1.5 flex h-[26px] items-center gap-2 rounded-[4px] px-1.5 text-[13px] text-fg ${i === idx ? "bg-active" : ""}`}
               >
-                <File size={14} className="text-faint" />
+                <File size={14} className="shrink-0 text-faint" aria-hidden />
                 <span className="shrink-0 whitespace-pre">
                   <Highlight text={base} hits={hits} offset={slash + 1} />
                 </span>
                 {dir && (
-                  <span className="min-w-0 truncate whitespace-pre text-[11.5px] text-faint">
+                  <span className="min-w-0 truncate whitespace-pre text-[12px] text-faint">
                     <Highlight text={dir} hits={hits} offset={0} />
                   </span>
                 )}
@@ -175,7 +188,7 @@ export default function QuickOpen({ onClose }: { onClose: () => void }) {
           })
         )}
       </div>
-      {files && files.length >= 20000 && <div className="border-t border-line px-4 py-1 text-[11px] text-faint">Showing the first 20,000 files.</div>}
+      {files && files.length >= 20000 && <div className="flex h-[28px] items-center border-t border-line px-3 text-[11px] text-faint">Showing the first 20,000 files.</div>}
     </div>
   );
 }

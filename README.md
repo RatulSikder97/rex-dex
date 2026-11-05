@@ -29,8 +29,8 @@ npm run desktop:build:dir    # same, unpacked app only (faster, for testing)
 npm run desktop:icons        # regenerate desktop/build/icon.{icns,ico,png} from icon*.svg
 ```
 
-- Outputs: macOS `.dmg` + `.zip` (arm64 + x64), Windows NSIS installer, Linux AppImage. Only the host
-  platform is built; run the build on each OS (or CI) for the others.
+- Outputs (in `dist/`): macOS `.dmg` + `.zip`, Windows NSIS installer, Linux AppImage. Builds the host OS and
+  arch; `REX_DESKTOP_ARCH=all npm run desktop:build` adds the other arch (arm64 + x64). Run it on each OS (or CI).
 - User data lives in the OS app-data folder (`~/Library/Application Support/REX/data` on macOS,
   `%APPDATA%\REX\data` on Windows): `REX_DATA_DIR` points the engine there. Engine log: `…/REX/logs/server.log`.
 - The engine listens on `127.0.0.1` with a stable per-install port and a fresh `REX_SESSION_SECRET` per launch.

@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   CircleSlash,
+  Clock,
   Copy,
   ExternalLink,
   FileText,
@@ -28,6 +29,7 @@ import Markdown from "@/components/Markdown";
 import { DeptIcon } from "@/components/icons";
 import { confirmDialog } from "@/components/ui/dialog";
 import { EmptyState, Skeleton } from "@/components/ui/empty";
+import { ErrorState } from "@/components/ui/kit";
 import { elapsed, useNow } from "@/components/mission/data";
 import { useAgents, useDepartments, useWorkbench } from "@/store/workbench";
 import SwarmDag from "./SwarmDag";
@@ -53,14 +55,20 @@ export default function SwarmView({ id, tabId }: { id: string; tabId: string }) 
 
   if (!swarm)
     return error ? (
-      <EmptyState icon={Network} title="Couldn't load this swarm" hint={error} action={{ label: "Show all swarms", onClick: () => openSwarmList() }} />
+      <div className="flex flex-col items-center">
+        <ErrorState title="Couldn’t load this swarm" error={`${error}. It may have been deleted; retry or go back to the list.`} onRetry={reload} />
+        <button className="btn btn-ghost btn-sm -mt-6" onClick={() => openSwarmList()}>
+          Show all swarms
+        </button>
+      </div>
     ) : (
-      <div className="space-y-4 p-6">
+      <div className="space-y-3 px-6 py-5" aria-busy="true" aria-label="Loading">
+        <Skeleton className="h-[18px] w-24" />
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="h-4 w-1/3" />
         <div className="flex gap-10 pt-4">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-24 w-52 rounded-xl" />
+            <Skeleton key={i} className="h-[76px] w-[224px] rounded-[6px]" />
           ))}
         </div>
       </div>
@@ -71,7 +79,7 @@ export default function SwarmView({ id, tabId }: { id: string; tabId: string }) 
 
   return (
     <div className="@container h-full overflow-y-auto">
-      <div className="mx-auto max-w-[1600px] space-y-5 p-5 pb-16">
+      <div className="mx-auto max-w-[1600px] space-y-4 px-6 pb-8 pt-5">
         <Header swarm={swarm} tabId={tabId} onChanged={(s) => (s ? apply(s) : reload())} />
 
         {swarm.status === "planning" && <Planning swarm={swarm} />}
@@ -81,16 +89,18 @@ export default function SwarmView({ id, tabId }: { id: string; tabId: string }) 
 
         {!!swarm.steps.length && (
           <div className="grid grid-cols-1 items-start gap-4 @[1400px]:grid-cols-[minmax(0,1fr)_420px]">
-            <section aria-label="Pipeline" className="min-w-0 rounded-xl border border-line bg-elev/30 p-4">
-              <div className="mb-3 flex items-center gap-2">
+            <section aria-label="Pipeline" className="card min-w-0">
+              <div className="card-head">
                 <h2 className="text-[13px] font-semibold">Pipeline</h2>
-                <span className="text-[11.5px] text-muted">
+                <span className="min-w-0 truncate text-[11px] font-normal text-muted">
                   {swarm.steps.length - 1} specialist step{swarm.steps.length === 2 ? "" : "s"} → synthesis · up to {swarm.max_parallel} in parallel
                 </span>
               </div>
-              <SwarmDag steps={swarm.steps} selected={sel} onSelect={setSelected} />
+              <div className="p-3">
+                <SwarmDag steps={swarm.steps} selected={sel} onSelect={setSelected} />
+              </div>
               {swarm.status === "planned" && (
-                <p className="mt-3 text-[12px] text-muted">
+                <p className="border-t border-line px-3 py-2 text-[12px] text-muted">
                   Review the plan: click a step to edit its brief or re-assign its agent, then <b className="text-fg">Start</b>.
                 </p>
               )}
@@ -155,46 +165,45 @@ function Header({ swarm, tabId, onChanged }: { swarm: Swarm; tabId: string; onCh
     });
 
   return (
-    <header className="space-y-3">
+    <header className="space-y-2">
       <div className="flex flex-wrap items-start gap-3">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent">
-          <Network size={17} />
-        </span>
         <div className="min-w-0 flex-1 basis-[280px]">
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={swarm.status} />
-            <span className="text-[11.5px] text-faint">Agent swarm · created {timeAgo(swarm.created_at)}</span>
+            <span className="text-[11px] text-muted">Swarm · created {timeAgo(swarm.created_at)}</span>
           </div>
-          <h1 className={`mt-1 text-[16px] font-semibold leading-snug ${open ? "" : "line-clamp-2"}`}>{headline}</h1>
+          <h1 className={`page-title mt-1.5 ${open ? "" : "line-clamp-2"}`} title={open ? undefined : headline}>
+            {headline}
+          </h1>
           {rest && (
             <>
               {open && <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted">{rest}</p>}
-              <button className="mt-1 flex items-center gap-1 text-[11.5px] text-accent hover:underline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-                {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {open ? "Less" : "Full goal"}
+              <button className="btn btn-ghost btn-sm -ml-2 mt-0.5" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+                {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {open ? "Show less" : "Full goal"}
               </button>
             </>
           )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           {swarm.status === "planned" && (
-            <button className="btn btn-primary !h-8 !rounded-lg !px-3" onClick={() => void start()} disabled={!!busy}>
+            <button className="btn btn-primary" onClick={() => void start()} disabled={!!busy}>
               {busy === "start" ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Start swarm
             </button>
           )}
           {isActive(swarm) && (
-            <button className="btn !h-8 !rounded-lg" onClick={() => void cancel()} disabled={!!busy}>
+            <button className="btn" onClick={() => void cancel()} disabled={!!busy}>
               {busy === "cancel" ? <Loader2 size={13} className="animate-spin" /> : <Square size={12} />} Cancel
             </button>
           )}
           {!isActive(swarm) && (
-            <button className="btn !h-8 !rounded-lg" onClick={() => void remove()} disabled={!!busy} title="Delete swarm">
+            <button className="btn btn-danger-ghost" onClick={() => void remove()} disabled={!!busy} title="Delete swarm">
               <Trash2 size={13} /> {swarm.status === "planned" ? "Discard" : "Delete"}
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-line bg-elev/30 px-3.5 py-2.5 text-[12px] text-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-line pb-3 text-[12px] text-muted">
         <span className="flex min-w-[180px] flex-1 items-center gap-2.5">
           <StepBar swarm={swarm} className="w-full max-w-[240px]" />
           <span className="shrink-0 tabular-nums">
@@ -202,15 +211,15 @@ function Header({ swarm, tabId, onChanged }: { swarm: Swarm; tabId: string; onCh
           </span>
         </span>
         {swarm.status !== "planning" && swarm.status !== "planned" && (
-          <span className="tabular-nums" title="Elapsed">
-            ⏱ {elapsed(t0, t1)}
+          <span className="flex items-center gap-1 tabular-nums" title="Elapsed">
+            <Clock size={12} aria-hidden /> {elapsed(t0, t1)}
           </span>
         )}
         <span title="Steps that may run at the same time">{swarm.max_parallel}× parallel</span>
         <span title={swarm.allow_edits ? "Engineering / QA steps may edit files in the linked repo" : "Steps are read-only"}>{swarm.allow_edits ? "File edits allowed" : "Read-only"}</span>
         {project && (
-          <button className="flex items-center gap-1 hover:text-fg" onClick={() => useWorkbench.getState().openTab({ kind: "board", projectId: project.id }, `${project.name} · Board`)} title="Open the project board">
-            <FolderOpen size={12} /> {project.name}
+          <button className="flex min-w-0 max-w-[200px] items-center gap-1 hover:text-fg" onClick={() => useWorkbench.getState().openTab({ kind: "board", projectId: project.id }, `${project.name} · Board`)} title={`Open the ${project.name} board`}>
+            <FolderOpen size={12} className="shrink-0" /> <span className="truncate">{project.name}</span>
           </button>
         )}
         {swarm.task_id && project && (
@@ -225,7 +234,7 @@ function Header({ swarm, tabId, onChanged }: { swarm: Swarm; tabId: string; onCh
         )}
       </div>
       {swarm.error && swarm.status === "error" && !!swarm.steps.length && (
-        <div className="rounded-xl border border-[color-mix(in_srgb,var(--err)_40%,transparent)] bg-[color-mix(in_srgb,var(--err)_8%,transparent)] px-3.5 py-2.5 text-[12.5px] text-err">{swarm.error}</div>
+        <div role="alert" className="rounded-[6px] border border-[color-mix(in_srgb,var(--err)_40%,var(--border))] bg-[color-mix(in_srgb,var(--err)_8%,transparent)] px-3 py-2 text-[12.5px] text-err">{swarm.error}</div>
       )}
     </header>
   );
@@ -238,23 +247,22 @@ function Planning({ swarm }: { swarm: Swarm }) {
   const { getDepartment } = useDepartments();
   const ceo = getDepartment("ceo");
   return (
-    <section aria-live="polite" className="rounded-xl border border-line bg-elev/30 px-6 py-10 text-center">
-      <span className="relative mx-auto grid h-14 w-14 place-items-center rounded-2xl" style={{ background: `color-mix(in srgb, ${ceo.color} 16%, transparent)`, color: ceo.color }}>
-        <span className="absolute inset-0 animate-ping rounded-2xl opacity-20" style={{ background: ceo.color }} aria-hidden />
-        <DeptIcon name={ceo.icon} size={24} />
+    <section aria-live="polite" className="card px-6 py-8 text-center">
+      <span className="mx-auto grid h-9 w-9 place-items-center rounded-[6px]" style={{ background: `color-mix(in srgb, ${ceo.color} 16%, transparent)`, color: ceo.color }}>
+        <DeptIcon name={ceo.icon} size={18} />
       </span>
-      <h2 className="mt-4 text-[14px] font-semibold">{ceo.name} is planning the swarm…</h2>
-      <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-muted">
-        Splitting the goal into department steps, deciding what can run in parallel and how the results get merged. This usually takes 20–60 seconds.
+      <h2 className="mt-3 text-[13px] font-semibold">{ceo.name} is planning the swarm</h2>
+      <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-muted">
+        Splitting the goal into department steps and deciding what can run in parallel. This usually takes 20–60 seconds.
       </p>
       <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] tabular-nums text-accent">
-        <Loader2 size={13} className="animate-spin" /> {elapsed(swarm.created_at, now)}
+        <Loader2 size={13} className="animate-spin motion-reduce:animate-none" aria-hidden /> {elapsed(swarm.created_at, now)}
       </p>
-      <div className="mx-auto mt-6 flex max-w-xl items-center justify-center gap-6 opacity-60" aria-hidden>
+      <div className="mx-auto mt-6 flex max-w-xl items-center justify-center gap-6" aria-hidden>
         {[3, 2, 1].map((n, i) => (
           <div key={i} className="flex flex-col gap-2">
             {Array.from({ length: n }).map((_, j) => (
-              <Skeleton key={j} className="h-10 w-28 rounded-lg" />
+              <Skeleton key={j} className="h-10 w-28 rounded-[6px]" />
             ))}
           </div>
         ))}
@@ -272,7 +280,7 @@ function PlanFailed({ swarm, tabId }: { swarm: Swarm; tabId: string }) {
     setBusy(false);
   };
   return (
-    <section className="rounded-xl border border-line bg-elev/30">
+    <section className="card">
       <EmptyState
         icon={CircleSlash}
         title={swarm.status === "cancelled" ? "Planning was cancelled" : "Planning failed"}
@@ -296,27 +304,26 @@ function Result({ swarm, synth }: { swarm: Swarm; synth: Step }) {
     .trim();
   const openDeliverable = () => swarm.deliverable_id && useWorkbench.getState().openTab({ kind: "deliverable", id: swarm.deliverable_id }, `Swarm: ${swarm.goal.split("\n")[0].slice(0, 40)}`);
   return (
-    <section aria-label="Result" className="overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--ok)_35%,var(--border))] bg-[color-mix(in_srgb,var(--ok)_5%,var(--bg-elev))]">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
-        <Sparkles size={14} className="text-ok" />
+    <section aria-label="Result" className="card overflow-hidden">
+      <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-line px-3 py-1.5">
+        <Sparkles size={14} className="text-ok" aria-hidden />
         <h2 className="text-[13px] font-semibold">Final deliverable</h2>
-        <span className="text-[11.5px] text-muted">merged by the Chief of Staff</span>
+        <span className="text-[11px] text-muted">Merged by the Chief of Staff</span>
         <span className="flex-1" />
-        <button className="btn !rounded-lg" onClick={() => void navigator.clipboard.writeText(text)} disabled={!text}>
+        <button className="btn btn-sm" onClick={() => void navigator.clipboard.writeText(text)} disabled={!text}>
           <Copy size={12} /> Copy
         </button>
         {swarm.deliverable_id && (
-          <button className="btn btn-primary !rounded-lg" onClick={openDeliverable}>
+          <button className="btn btn-primary btn-sm" onClick={openDeliverable}>
             <FileText size={12} /> Open deliverable
           </button>
         )}
       </div>
-      <div className={`relative px-4 py-3 ${full ? "" : "max-h-[360px] overflow-hidden"}`}>
+      <div className={`px-4 py-3 ${full ? "" : "max-h-[360px] overflow-hidden"}`}>
         {text ? <Markdown text={text} /> : <p className="text-[12.5px] text-muted">The synthesis step produced no output.</p>}
-        {!full && text.length > 900 && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[color-mix(in_srgb,var(--ok)_5%,var(--bg-elev))] to-transparent" aria-hidden />}
       </div>
       {text.length > 900 && (
-        <button className="flex w-full items-center justify-center gap-1 border-t border-line py-1.5 text-[12px] text-accent hover:bg-hover" onClick={() => setFull((f) => !f)} aria-expanded={full}>
+        <button className="flex h-7 w-full items-center justify-center gap-1 border-t border-line text-[12px] text-muted hover:bg-hover hover:text-fg" onClick={() => setFull((f) => !f)} aria-expanded={full}>
           {full ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {full ? "Collapse" : "Show all"}
         </button>
       )}
@@ -390,18 +397,18 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
     useWorkbench.getState().launchTerminal({ id: agentId, action: "interactive", department: step.department, threadId: `swarm:${swarm.id}:${step.key}` });
 
   return (
-    <section aria-label={`Step: ${step.title}`} className="flex min-w-0 flex-col rounded-xl border border-line bg-elev/30 @[1400px]:sticky @[1400px]:top-0 @[1400px]:max-h-[calc(100vh-120px)]">
-      <div className="space-y-2.5 border-b border-line p-4">
+    <section aria-label={`Step: ${step.title}`} className="card flex min-w-0 flex-col @[1400px]:sticky @[1400px]:top-0 @[1400px]:max-h-[calc(100vh-120px)]">
+      <div className="space-y-2.5 border-b border-line p-3">
         <div className="flex items-center gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: `color-mix(in srgb, ${d.color} 16%, transparent)`, color: d.color }}>
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-[6px]" style={{ background: `color-mix(in srgb, ${d.color} 16%, transparent)`, color: d.color }}>
             {synth ? <Sparkles size={14} /> : <DeptIcon name={d.icon} size={14} />}
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[11.5px] text-muted">
+            <div className="truncate text-[11px] text-muted">
               {d.name}
               {time && <span className="tabular-nums"> · {time}</span>}
             </div>
-            <h3 className="text-[13.5px] font-semibold leading-snug">{step.title}</h3>
+            <h3 className="text-[13px] font-semibold leading-snug">{step.title}</h3>
           </div>
           <StatusPill status={step.status} kind="step" />
         </div>
@@ -410,7 +417,7 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
           <div className="flex flex-wrap items-center gap-1 text-[11.5px] text-muted">
             <span className="mr-0.5">Waits for</span>
             {deps.map((s) => (
-              <button key={s.id} className="max-w-[180px] truncate rounded-md border border-line px-1.5 leading-[18px] hover:border-accent hover:text-fg" onClick={() => onSelect(s.id)}>
+              <button key={s.id} className="max-w-[180px] truncate rounded-[4px] border border-line px-1.5 leading-[18px] hover:bg-hover hover:text-fg" onClick={() => onSelect(s.id)} title={s.title}>
                 {s.title}
               </button>
             ))}
@@ -423,56 +430,56 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
             <AgentPicker
               value={step.agent ?? ""}
               department={step.department}
-              className="input h-7 w-auto max-w-[190px] text-[11.5px]"
+              className="input input-sm w-auto max-w-[190px]"
               title={step.status === "running" ? "Agent can't change while the step runs" : "Terminal agent for this step"}
               onChange={(v) => void run("set-agent", { agent: v })}
             />
           </label>
           {step.provider && step.agent && step.provider !== step.agent && <span className="text-[11px] text-faint">ran on {agents.label(step.provider)}</span>}
-          {busy === "set-agent" && <Loader2 size={12} className="animate-spin text-faint" />}
+          {busy === "set-agent" && <Loader2 size={12} className="animate-spin text-faint" aria-label="Saving" />}
         </div>
 
         <div className="flex flex-wrap gap-1.5">
           {(step.status === "error" || step.status === "cancelled" || step.status === "skipped" || step.status === "done") && (
-            <button className={`btn !h-7 !rounded-lg ${step.status === "error" ? "btn-primary" : ""}`} onClick={() => void run("retry")} disabled={!!busy}>
+            <button className={`btn btn-sm ${step.status === "error" ? "btn-primary" : ""}`} onClick={() => void run("retry")} disabled={!!busy}>
               {busy === "retry" ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} {step.status === "done" ? "Re-run" : "Retry"}
             </button>
           )}
           {(step.status === "pending" || step.status === "running" || step.status === "error") && !synth && (
-            <button className="btn !h-7 !rounded-lg" onClick={() => void skip()} disabled={!!busy}>
+            <button className="btn btn-sm" onClick={() => void skip()} disabled={!!busy}>
               <SkipForward size={12} /> Skip
             </button>
           )}
           {step.run_id && (
-            <button className="btn !h-7 !rounded-lg" onClick={() => useWorkbench.getState().openTab({ kind: "run", id: step.run_id! }, `Run · ${d.name}`)}>
+            <button className="btn btn-sm" onClick={() => useWorkbench.getState().openTab({ kind: "run", id: step.run_id! }, `Run · ${d.name}`)}>
               <History size={12} /> Open run
             </button>
           )}
-          <button className="btn !h-7 !rounded-lg" onClick={terminal} title={`Open this step's ${agents.label(agentId)} session in the terminal`}>
+          <button className="btn btn-sm" onClick={terminal} title={`Open this step's ${agents.label(agentId)} session in the terminal`}>
             <SquareTerminal size={12} /> Terminal
           </button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-        {step.error && <div className="whitespace-pre-wrap break-words rounded-lg border border-[color-mix(in_srgb,var(--err)_40%,transparent)] bg-[color-mix(in_srgb,var(--err)_8%,transparent)] px-3 py-2 font-mono text-[11.5px] text-err">{step.error}</div>}
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+        {step.error && <div className="whitespace-pre-wrap break-words rounded-[6px] border border-[color-mix(in_srgb,var(--err)_40%,var(--border))] bg-[color-mix(in_srgb,var(--err)_8%,transparent)] px-3 py-2 font-mono text-[11.5px] text-err">{step.error}</div>}
 
         <div>
           <div className="mb-1 flex items-center gap-2">
             <span className="section-title">Brief</span>
             <span className="flex-1" />
             {editable && !editing && (
-              <button className="flex items-center gap-1 text-[11.5px] text-accent hover:underline" onClick={() => setEditing(true)}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>
                 <Pencil size={11} /> Edit
               </button>
             )}
           </div>
           {editing ? (
             <div className="space-y-1.5">
-              <textarea className="input !h-auto min-h-[140px] py-1.5 leading-relaxed" value={brief} onChange={(e) => setBrief(e.target.value)} aria-label="Step brief" autoFocus />
+              <textarea className="input min-h-[140px]" value={brief} onChange={(e) => setBrief(e.target.value)} aria-label="Step brief" autoFocus />
               <div className="flex justify-end gap-1.5">
                 <button
-                  className="btn !h-7 !rounded-lg"
+                  className="btn btn-sm"
                   onClick={() => {
                     setEditing(false);
                     setBrief(step.brief);
@@ -481,7 +488,7 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
                   Cancel
                 </button>
                 <button
-                  className="btn btn-primary !h-7 !rounded-lg"
+                  className="btn btn-primary btn-sm"
                   disabled={!brief.trim() || busy === "edit"}
                   onClick={() =>
                     void run("edit", { brief: brief.trim() }).then(() => {
@@ -501,20 +508,20 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
         <div>
           <div className="mb-1 flex items-center gap-2">
             <span className="section-title">Output</span>
-            {step.status === "running" && <Loader2 size={11} className="animate-spin text-accent" />}
+            {step.status === "running" && <Loader2 size={11} className="animate-spin text-accent motion-reduce:animate-none" aria-label="Running" />}
             <span className="flex-1" />
             {output && (
-              <button className="flex items-center gap-1 text-[11.5px] text-muted hover:text-fg" onClick={() => void navigator.clipboard.writeText(output)}>
+              <button className="btn btn-ghost btn-sm" onClick={() => void navigator.clipboard.writeText(output)}>
                 <Copy size={11} /> Copy
               </button>
             )}
           </div>
           {output ? (
-            <div className="rounded-lg border border-line bg-editor px-3 py-2">
+            <div className="rounded-[6px] border border-line bg-editor px-3 py-2">
               <Markdown text={output} streaming={step.status === "running"} />
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-[12px] text-faint">
+            <p className="rounded-[6px] border border-dashed border-line px-3 py-4 text-center text-[12px] text-muted">
               {step.status === "running"
                 ? "Waiting for the agent's first words…"
                 : step.status === "pending"
@@ -522,12 +529,12 @@ function StepDetail({ swarm, step, onChanged, onSelect }: { swarm: Swarm; step: 
                     ? "Starts when the steps it waits for finish."
                     : swarm.status === "planned"
                       ? "Starts when you start the swarm."
-                      : "Queued — waiting for a free parallel slot."
+                      : "Queued. Waiting for a free parallel slot."
                   : "No output."}
             </p>
           )}
           {synth && swarm.deliverable_id && (
-            <button className="btn mt-2 !rounded-lg" onClick={() => useWorkbench.getState().openTab({ kind: "deliverable", id: swarm.deliverable_id! }, `Swarm: ${swarm.goal.split("\n")[0].slice(0, 40)}`)}>
+            <button className="btn btn-sm mt-2" onClick={() => useWorkbench.getState().openTab({ kind: "deliverable", id: swarm.deliverable_id! }, `Swarm: ${swarm.goal.split("\n")[0].slice(0, 40)}`)}>
               <ExternalLink size={12} /> Open deliverable
             </button>
           )}

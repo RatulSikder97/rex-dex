@@ -4,10 +4,10 @@ import { Activity, Globe, Lock, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { api, timeAgo } from "@/lib/client";
 import type { Monitor } from "@/lib/opsTypes";
 import type { Project } from "@/lib/types";
-import { EmptyState } from "@/components/ui/empty";
+import { EmptyState, Skeleton } from "@/components/ui/empty";
 import { confirmDialog } from "@/components/ui/dialog";
 import { useActiveProject, useWorkbench } from "@/store/workbench";
-import { Card, ErrorBox, LoadingGrid, Pill, Sparkline, Spinner, errMsg, useOpsFetch, type OpsNav, type Tone } from "./shared";
+import { Card, ErrorBox, Pill, Sentence, Sparkline, Spinner, errMsg, friendlyError, useOpsFetch, type OpsNav, type Tone } from "./shared";
 
 const normUrl = (u: string) => u.trim().replace(/\/+$/, "").toLowerCase();
 
@@ -89,8 +89,14 @@ export default function UptimeSection({ nav, project: projectProp, addIntent }: 
     }
   };
 
-  if (!list && error) return <ErrorBox title="Couldn't load monitors">{error}</ErrorBox>;
-  if (!list) return <LoadingGrid n={2} h="h-20" />;
+  if (!list && error) return <ErrorBox title="Couldn't load monitors" error={error} onRetry={() => void reload()} />;
+  if (!list)
+    return (
+      <div className="space-y-3" aria-busy="true" aria-label="Loading">
+        <Skeleton className="h-[62px] !rounded-[6px]" />
+        <Skeleton className="h-[180px] !rounded-[6px]" />
+      </div>
+    );
 
   const site = project?.website_url?.trim();
   const siteMonitored = !!site && list.some((m) => normUrl(m.url) === normUrl(/^https?:\/\//i.test(site) ? site : `https://${site}`));
@@ -98,49 +104,56 @@ export default function UptimeSection({ nav, project: projectProp, addIntent }: 
   return (
     <div className="space-y-4">
       <form
-        className="flex flex-wrap items-end gap-2 rounded-xl border border-line bg-elev/30 p-3"
+        className="card flex flex-wrap items-end gap-2 p-3"
         onSubmit={(e) => {
           e.preventDefault();
           void add(name, target);
         }}
         aria-label="Add monitor"
       >
-        <label className="w-40 space-y-1 text-[11.5px] text-muted">
-          <span>Name</span>
+        <label className="field w-40">
+          <span className="label">Name</span>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Website" />
         </label>
-        <label className="min-w-[200px] flex-1 space-y-1 text-[11.5px] text-muted">
-          <span>URL</span>
+        <label className="field min-w-[200px] flex-1">
+          <span className="label">URL</span>
           <input ref={urlInput} className="input font-mono" required value={target} onChange={(e) => setTarget(e.target.value)} placeholder="https://example.com/health" />
         </label>
-        <button type="submit" className="btn btn-primary h-7" disabled={adding || !target.trim()}>
+        <button type="submit" className="btn btn-primary" disabled={adding || !target.trim()}>
           {adding ? <Spinner /> : <Plus size={12} />} Add monitor
         </button>
         {site && !siteMonitored && (
-          <button type="button" className="btn h-7" disabled={adding} onClick={() => void add(project?.name ? `${project.name} website` : "Website", site)}>
+          <button type="button" className="btn" disabled={adding} onClick={() => void add(project?.name ? `${project.name} website` : "Website", site)}>
             <Globe size={12} /> Add project website
           </button>
         )}
+        <p className="help !mt-0 w-full">Checked once a minute in the background: status, latency and TLS expiry.</p>
       </form>
-      <p className="-mt-2 text-[11.5px] text-faint">Every monitor is checked once a minute in the background (status, latency and TLS expiry).</p>
 
       {!list.length ? (
         <Card>
-          <EmptyState icon={Activity} title="No monitors yet" hint="Add your website, API health endpoint or anything public. You'll see downtime here and in Issues." />
+          <EmptyState
+            icon={Activity}
+            title="No monitors yet"
+            hint="Add your website, API health endpoint or anything public. Downtime shows here and in Issues."
+            action={site ? { label: "Monitor project website", icon: Globe, onClick: () => void add(project?.name ? `${project.name} website` : "Website", site) } : { label: "Add monitor", icon: Plus, onClick: () => urlInput.current?.focus() }}
+          />
         </Card>
       ) : (
-        <ul className="space-y-2" aria-label="Monitors">
+        <ul className="card divide-y divide-line overflow-hidden" aria-label="Monitors">
           {list.map((m) => {
             const l = m.last;
             const tls = tlsTone(l?.tlsDaysLeft ?? null);
             const statusTone: Tone = !l ? "muted" : l.ok ? "ok" : "err";
             return (
-              <li key={m.id} className="rounded-xl border border-line bg-elev/30 p-3">
+              <li key={m.id} className="px-3 py-2.5">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <Pill tone={statusTone}>{!l ? "Pending" : l.ok ? "Up" : "Down"}</Pill>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-medium">{m.name}</div>
-                    <a href={m.url} target="_blank" rel="noreferrer" className="block truncate font-mono text-[11.5px] text-muted hover:text-accent hover:underline">
+                    <div className="truncate text-[13px] font-medium" title={m.name}>
+                      {m.name}
+                    </div>
+                    <a href={m.url} target="_blank" rel="noreferrer" title={m.url} className="block truncate font-mono text-[11.5px] text-muted hover:text-accent hover:underline">
                       {m.url}
                     </a>
                   </div>
@@ -170,8 +183,12 @@ export default function UptimeSection({ nav, project: projectProp, addIntent }: 
                 </div>
                 {l && (
                   <div className="mt-1 flex gap-2 text-[11px] text-faint">
-                    <span>checked {timeAgo(l.at)}</span>
-                    {l.error && <span className="min-w-0 flex-1 truncate text-err">{l.error}</span>}
+                    <span className="shrink-0">Checked {timeAgo(l.at)}</span>
+                    {l.error && (
+                      <span className="min-w-0 flex-1 truncate text-err" title={l.error}>
+                        <Sentence text={friendlyError(l.error).text} />
+                      </span>
+                    )}
                   </div>
                 )}
               </li>

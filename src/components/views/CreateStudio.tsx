@@ -18,6 +18,8 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { ErrorState, Pill, Segmented, type Tone } from "@/components/ui/kit";
+import { EmptyState, Skeleton } from "@/components/ui/empty";
 import { api } from "@/lib/client";
 import {
   ASPECTS,
@@ -55,16 +57,16 @@ interface Preset {
 
 const BUILTIN_PRESETS: Preset[] = [
   { id: "explainer-60", title: "60s product explainer (16:9)", kind: "video", aspect: "16:9", targetSeconds: 60, style: "Clear, confident, benefit-led. Problem → solution → how it works → proof → call to action.", brief: "" },
-  { id: "reel-30", title: "30s Reel / Short (9:16)", kind: "video", aspect: "9:16", targetSeconds: 30, style: "Punchy hook in the first 2 seconds, short sentences, energetic, ends with a clear call to action.", brief: "" },
+  { id: "reel-30", title: "30s reel / short (9:16)", kind: "video", aspect: "9:16", targetSeconds: 30, style: "Punchy hook in the first 2 seconds, short sentences, energetic, ends with a clear call to action.", brief: "" },
   { id: "teaser-15", title: "Launch teaser (1:1, 15s)", kind: "video", aspect: "1:1", targetSeconds: 15, style: "Mysterious build-up, 3–4 quick beats, reveal the name and launch date at the end.", brief: "" },
   { id: "tutorial-vo", title: "Tutorial voiceover", kind: "voiceover", targetSeconds: 90, style: "Friendly instructor. Step-by-step, one action per segment, plain language.", brief: "" },
   { id: "podcast-3m", title: "2-host podcast episode (~3 min)", kind: "podcast", targetSeconds: 180, style: "Conversational and curious. One host explains, the other asks sharp questions and pushes back.", brief: "" },
 ];
 
-const MODES: { id: JobKind; label: string; icon: typeof Film }[] = [
-  { id: "video", label: "Video", icon: Clapperboard },
-  { id: "voiceover", label: "Voiceover", icon: Mic },
-  { id: "podcast", label: "Podcast", icon: Podcast },
+const MODES: { value: JobKind; label: string; icon: typeof Film }[] = [
+  { value: "video", label: "Video", icon: Clapperboard },
+  { value: "voiceover", label: "Voiceover", icon: Mic },
+  { value: "podcast", label: "Podcast", icon: Podcast },
 ];
 
 const EMPTY_SCENE: Scene = { narration: "", onScreenText: "", visualPrompt: "", durationSec: 5 };
@@ -148,9 +150,24 @@ export default function CreateStudio({ jobId }: { jobId?: string }) {
   const prevStatus = useRef<string | null>(null);
 
   // ---- data
+  const [providersState, setProvidersState] = useState<"loading" | "ready" | "error">("loading");
+  const [providersError, setProvidersError] = useState<unknown>(null);
+  const [jobError, setJobError] = useState<unknown>(null);
+  const loadProviders = useCallback(() => {
+    setProvidersState("loading");
+    api<MediaProvider[]>("/api/media-providers")
+      .then((p) => {
+        setMediaProviders(p);
+        setProvidersState("ready");
+      })
+      .catch((e) => {
+        setProvidersError(e);
+        setProvidersState("error");
+      });
+  }, []);
   useEffect(() => {
-    api<MediaProvider[]>("/api/media-providers").then(setMediaProviders).catch((e) => log("error", "create", String(e)));
-  }, [log]);
+    loadProviders();
+  }, [loadProviders]);
   useEffect(() => {
     api<MediaFile[]>("/api/media").then(setMedia).catch(() => {});
   }, [version]);
@@ -220,10 +237,14 @@ export default function CreateStudio({ jobId }: { jobId?: string }) {
     return j;
   }, []);
 
-  useEffect(() => {
+  const reloadJob = useCallback(() => {
     if (!jobId) return;
-    loadJob(jobId, true).catch((e) => log("error", "create", `Could not load job: ${e}`));
-  }, [jobId, loadJob, log]);
+    setJobError(null);
+    loadJob(jobId, true).catch((e) => setJobError(e));
+  }, [jobId, loadJob]);
+  useEffect(() => {
+    reloadJob();
+  }, [reloadJob]);
 
   const jobActive = job?.status === "running" || job?.status === "queued";
   useEffect(() => {
@@ -338,194 +359,18 @@ export default function CreateStudio({ jobId }: { jobId?: string }) {
   const selectedImage = imageProviders.find((p) => p.id === image);
   const needsVoice = mode !== "video";
   const canProduce = Boolean(plan) && busy === null && !jobActive && (!needsVoice || tts !== "none");
+  const produceHint = !plan ? "Draft or write a script first" : needsVoice && tts === "none" ? "Pick a voice provider first" : jobActive ? "A job is already running" : "Render the script to a media file";
 
   return (
-    <div className="flex h-full min-h-0">
-      {/* ---------------- settings */}
-      <div className="flex w-[330px] shrink-0 flex-col border-r border-line bg-side">
-        <div className="flex h-9 shrink-0 items-center gap-1 border-b border-line px-2">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => switchMode(m.id)}
-              className={`inline-flex h-7 items-center gap-1.5 rounded px-2.5 text-[12px] ${mode === m.id ? "bg-active text-fg" : "text-muted hover:bg-hover hover:text-fg"}`}
-            >
-              <m.icon size={13} /> {m.label}
-            </button>
-          ))}
-        </div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
-          <label className="block">
-            <span className="label">Preset</span>
-            <select className="input" value={presetId} onChange={(e) => applyPreset(e.target.value)}>
-              <option value="">Custom</option>
-              <optgroup label="Built-in">
-                {BUILTIN_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title}
-                  </option>
-                ))}
-              </optgroup>
-              {presets.some((p) => p.source) && (
-                <optgroup label="Extensions">
-                  {presets.filter((p) => p.source).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </label>
-          <label className="block">
-            <span className="label">Brief</span>
-            <textarea
-              className="input"
-              rows={5}
-              placeholder={
-                mode === "video"
-                  ? "What is the video about? Audience, product, key message, call to action…"
-                  : mode === "voiceover"
-                    ? "What should the voiceover say? Topic, audience, key points…"
-                    : "Episode topic, angle, and the points the hosts should cover…"
-              }
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {mode === "video" && (
-              <label>
-                <span className="label">Aspect</span>
-                <select className="input" value={aspect} onChange={(e) => setAspect(e.target.value as Aspect)}>
-                  {ASPECTS.map((a) => (
-                    <option key={a}>{a}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label className={mode === "video" ? "" : "col-span-2"}>
-              <span className="label">Target length (sec)</span>
-              <input className="input" type="number" min={5} max={900} step={5} value={targetSeconds} onChange={(e) => setTargetSeconds(Math.max(5, Math.min(900, Number(e.target.value) || 5)))} />
-            </label>
-          </div>
-          <label className="block">
-            <span className="label">Style</span>
-            <textarea className="input" rows={2} placeholder="Tone, pacing, voice…" value={style} onChange={(e) => setStyle(e.target.value)} />
-          </label>
-          <div className="flex gap-2">
-            <AgentPicker value={provider} onChange={setProvider} department={mode === "video" ? "video" : "content"} className="input w-auto text-[11.5px]" title="AI writer (terminal agent)" />
-            <button className="btn btn-primary flex-1 justify-center" onClick={draft} disabled={!brief.trim() || busy !== null}>
-              <Sparkles size={13} /> {busy === "script" ? "Drafting…" : "Draft script"}
-            </button>
-          </div>
-
-          <div className="section-title pt-2">Production</div>
-          <label className="block">
-            <span className="label">Voice provider</span>
-            <select className="input" value={tts} onChange={(e) => setTts(e.target.value)}>
-              {mode === "video" && <option value="none">None (silent)</option>}
-              {ttsProviders.map((p) => (
-                <option key={p.id} value={p.id} disabled={!p.available}>
-                  {p.label}
-                  {p.available ? "" : " (unavailable)"}
-                </option>
-              ))}
-            </select>
-            {selectedTts && !selectedTts.available && <span className="mt-1 block text-[11px] text-warn">{selectedTts.detail}</span>}
-          </label>
-          {tts !== "none" && voices.length > 0 && (
-            <div className={mode === "podcast" ? "grid grid-cols-2 gap-2" : ""}>
-              <label className="block">
-                <span className="label">{mode === "podcast" ? `Voice · ${(plan as PodcastPlan | null)?.hosts?.[0] ?? "Host 1"}` : "Voice"}</span>
-                <select className="input" value={voice} onChange={(e) => setVoice(e.target.value)}>
-                  {voices.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {mode === "podcast" && (
-                <label className="block">
-                  <span className="label">Voice · {(plan as PodcastPlan | null)?.hosts?.[1] ?? "Host 2"}</span>
-                  <select className="input" value={voice2} onChange={(e) => setVoice2(e.target.value)}>
-                    {voices.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
-          )}
-          {mode === "video" && (
-            <label className="block">
-              <span className="label">Images</span>
-              <select className="input" value={image} onChange={(e) => setImage(e.target.value)}>
-                {imageProviders.map((p) => (
-                  <option key={p.id} value={p.id} disabled={!p.available}>
-                    {p.label}
-                    {p.available ? "" : " (unavailable)"}
-                  </option>
-                ))}
-              </select>
-              {selectedImage && <span className={`mt-1 block text-[11px] ${selectedImage.available ? "text-faint" : "text-warn"}`}>{selectedImage.detail}</span>}
-            </label>
-          )}
-          <label className="block">
-            <span className="label">{mode === "podcast" ? "Intro / outro music" : "Music bed"}</span>
-            <select className="input" value={music} onChange={(e) => setMusic(e.target.value)}>
-              <option value="none">None</option>
-              <option value="ambient">Ambient (generated)</option>
-              {musicFiles.length > 0 && (
-                <optgroup label="Media library">
-                  {musicFiles.map((m) => (
-                    <option key={m.name} value={m.name}>
-                      {m.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-          </label>
-          {mode === "video" && (
-            <label className="flex items-center gap-2 text-[12.5px]">
-              <input type="checkbox" checked={captions} disabled={tts === "none"} onChange={(e) => setCaptions(e.target.checked)} />
-              Burn in captions (also saved as SRT)
-            </label>
-          )}
-        </div>
-      </div>
-
-      {/* ---------------- plan + production */}
-      <div className="flex min-w-0 flex-1 flex-col bg-editor">
-        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-line px-3">
-          {plan ? (
-            <input
-              className="input h-7 min-w-[180px] max-w-[420px] flex-1 font-medium"
-              value={plan.title}
-              onChange={(e) => setPlan({ ...plan, title: e.target.value } as AnyPlan)}
-              aria-label="Title"
-            />
-          ) : (
-            <span className="text-[12.5px] text-muted">Create Studio</span>
-          )}
-          {plan && (
-            <span className="shrink-0 text-[11.5px] text-muted" title={`Estimated at ${WORDS_PER_SEC} words/sec`}>
-              ≈ {fmtDur(total)} total
-            </span>
-          )}
-          <div className="flex-1" />
-          {!plan && (
-            <button className="btn" onClick={() => setPlan(emptyPlan(mode))}>
-              <Plus size={13} /> Write manually
-            </button>
-          )}
+    <div className="@container flex h-full min-h-0 flex-col bg-editor">
+      {/* ---------------- page header: title · mode · actions */}
+      <header className="flex min-h-[52px] shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-2">
+        <h1 className="page-title shrink-0">Create studio</h1>
+        <Segmented label="Format" value={mode} onChange={switchMode} options={MODES} />
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
           {plan && (
             <button className="btn" onClick={saveScript} title="Save the script to the deliverables library">
-              <Save size={13} /> Save script as deliverable
+              <Save size={13} /> Save script
             </button>
           )}
           {jobActive ? (
@@ -533,35 +378,269 @@ export default function CreateStudio({ jobId }: { jobId?: string }) {
               <Square size={12} /> Cancel
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={produce} disabled={!canProduce}>
+            <button className={`btn ${plan ? "btn-primary" : ""}`} onClick={produce} disabled={!canProduce} title={produceHint}>
               <Play size={13} /> {busy === "produce" ? "Starting…" : "Produce"}
             </button>
           )}
         </div>
+      </header>
 
-        {job && <JobStatusBar job={job} showLog={showLog} setShowLog={setShowLog} logRef={logRef} onOpenEditor={(file) => openTab({ kind: "video", file }, "Video Editor")} onCopySrt={copySrt} />}
-
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {!plan ? (
-            <div className="mx-auto mt-16 max-w-md text-center text-muted">
-              <Sparkles size={22} className="mx-auto mb-3 text-faint" />
-              <p className="text-[13px]">Pick a preset, write a brief, then <b className="text-fg">Draft script</b>.</p>
-              <p className="mt-1 text-[12px]">You can edit every line before producing.</p>
+      <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto @3xl:grid-cols-[300px_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)] @3xl:overflow-hidden @5xl:grid-cols-[320px_minmax(0,1fr)]">
+        {/* ---------------- settings */}
+        <aside aria-label="Settings" className="min-w-0 border-b border-line bg-side @3xl:overflow-y-auto @3xl:border-b-0 @3xl:border-r">
+          <FieldGroup title="Script">
+            <Field label="Preset" htmlFor="cs-preset">
+              <select id="cs-preset" className="input" value={presetId} onChange={(e) => applyPreset(e.target.value)}>
+                <option value="">Custom</option>
+                <optgroup label="Built-in">
+                  {BUILTIN_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
+                  ))}
+                </optgroup>
+                {presets.some((p) => p.source) && (
+                  <optgroup label="Extensions">
+                    {presets.filter((p) => p.source).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </Field>
+            <Field label="Brief" htmlFor="cs-brief">
+              <textarea
+                id="cs-brief"
+                className="input"
+                rows={5}
+                placeholder={
+                  mode === "video"
+                    ? "What is the video about? Audience, product, key message, call to action…"
+                    : mode === "voiceover"
+                      ? "What should the voiceover say? Topic, audience, key points…"
+                      : "Episode topic, angle, and the points the hosts should cover…"
+                }
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-2">
+              {mode === "video" && (
+                <Field label="Aspect ratio" htmlFor="cs-aspect">
+                  <select id="cs-aspect" className="input" value={aspect} onChange={(e) => setAspect(e.target.value as Aspect)}>
+                    {ASPECTS.map((a) => (
+                      <option key={a}>{a}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+              <div className={mode === "video" ? "" : "col-span-2"}>
+                <Field label="Length (seconds)" htmlFor="cs-length">
+                  <input
+                    id="cs-length"
+                    className="input"
+                    type="number"
+                    min={5}
+                    max={900}
+                    step={5}
+                    value={targetSeconds}
+                    onChange={(e) => setTargetSeconds(Math.max(5, Math.min(900, Number(e.target.value) || 5)))}
+                  />
+                </Field>
+              </div>
             </div>
-          ) : mode === "video" ? (
-            <VideoEditor plan={plan as VideoPlan} setPlan={setPlan} />
-          ) : mode === "voiceover" ? (
-            <VoiceoverEditor plan={plan as VoiceoverPlan} setPlan={setPlan} />
-          ) : (
-            <PodcastEditor plan={plan as PodcastPlan} setPlan={setPlan} />
+            <Field label="Style" htmlFor="cs-style" help="Tone, pacing and voice the writer should follow.">
+              <textarea id="cs-style" className="input" rows={2} placeholder="Calm, confident, short sentences…" value={style} onChange={(e) => setStyle(e.target.value)} />
+            </Field>
+            <Field label="Writer" help="The agent that drafts the script.">
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <AgentPicker value={provider} onChange={setProvider} department={mode === "video" ? "video" : "content"} className="input" title="Agent that drafts the script" />
+                </div>
+                <button className={`btn shrink-0 ${plan ? "" : "btn-primary"}`} onClick={draft} disabled={!brief.trim() || busy !== null} title={brief.trim() ? "Draft a script from the brief" : "Write a brief first"}>
+                  <Sparkles size={13} /> {busy === "script" ? "Drafting…" : plan ? "Redraft" : "Draft script"}
+                </button>
+              </div>
+            </Field>
+          </FieldGroup>
+
+          <FieldGroup title="Production">
+            {providersState === "loading" ? (
+              <div className="space-y-3" aria-busy="true" aria-label="Loading voice and image providers">
+                {[0, 1, 2].map((i) => (
+                  <div key={i}>
+                    <Skeleton className="mb-1.5 h-3 w-24" />
+                    <Skeleton className="h-7 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : providersState === "error" ? (
+              <ErrorState compact title="Couldn’t load voice and image providers" error={providersError} onRetry={loadProviders} />
+            ) : (
+              <>
+                <Field label="Voice provider" htmlFor="cs-tts">
+                  <select id="cs-tts" className="input" value={tts} onChange={(e) => setTts(e.target.value)}>
+                    {mode === "video" && <option value="none">None (silent)</option>}
+                    {ttsProviders.map((p) => (
+                      <option key={p.id} value={p.id} disabled={!p.available}>
+                        {p.label}
+                        {p.available ? "" : " (unavailable)"}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedTts && !selectedTts.available && <p className="help !text-warn">{selectedTts.detail}</p>}
+                  {needsVoice && tts === "none" && <p className="help !text-warn">Pick a voice provider to produce audio.</p>}
+                </Field>
+                {tts !== "none" && voices.length > 0 && (
+                  <div className={mode === "podcast" ? "grid grid-cols-2 gap-2" : ""}>
+                    <Field label={mode === "podcast" ? (plan as PodcastPlan | null)?.hosts?.[0] || "Host 1" : "Voice"} htmlFor="cs-voice">
+                      <select id="cs-voice" className="input" value={voice} onChange={(e) => setVoice(e.target.value)}>
+                        {voices.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    {mode === "podcast" && (
+                      <Field label={(plan as PodcastPlan | null)?.hosts?.[1] || "Host 2"} htmlFor="cs-voice2">
+                        <select id="cs-voice2" className="input" value={voice2} onChange={(e) => setVoice2(e.target.value)}>
+                          {voices.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+                    )}
+                  </div>
+                )}
+                {mode === "video" && (
+                  <Field label="Images" htmlFor="cs-image">
+                    <select id="cs-image" className="input" value={image} onChange={(e) => setImage(e.target.value)}>
+                      {imageProviders.map((p) => (
+                        <option key={p.id} value={p.id} disabled={!p.available}>
+                          {p.label}
+                          {p.available ? "" : " (unavailable)"}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedImage && <p className={`help ${selectedImage.available ? "" : "!text-warn"}`}>{selectedImage.detail}</p>}
+                  </Field>
+                )}
+                <Field label={mode === "podcast" ? "Intro and outro music" : "Music bed"} htmlFor="cs-music">
+                  <select id="cs-music" className="input" value={music} onChange={(e) => setMusic(e.target.value)}>
+                    <option value="none">None</option>
+                    <option value="ambient">Ambient (generated)</option>
+                    {musicFiles.length > 0 && (
+                      <optgroup label="Media library">
+                        {musicFiles.map((m) => (
+                          <option key={m.name} value={m.name}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </Field>
+                {mode === "video" && (
+                  <label className="flex items-start gap-2 text-[12.5px]">
+                    <input type="checkbox" className="mt-0.5" checked={captions} disabled={tts === "none"} onChange={(e) => setCaptions(e.target.checked)} />
+                    <span>
+                      Burn in captions
+                      <span className="help mt-0.5 block">Also saved as an SRT file. Needs a voice.</span>
+                    </span>
+                  </label>
+                )}
+              </>
+            )}
+          </FieldGroup>
+        </aside>
+
+        {/* ---------------- script + production */}
+        <section aria-label="Script" className="flex min-h-[360px] min-w-0 flex-col @3xl:min-h-0">
+          {plan && (
+            <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-4">
+              <label htmlFor="cs-title" className="sr-only">
+                Title
+              </label>
+              <input
+                id="cs-title"
+                className="input input-sm min-w-0 max-w-[420px] flex-1 font-medium"
+                value={plan.title}
+                onChange={(e) => setPlan({ ...plan, title: e.target.value } as AnyPlan)}
+              />
+              <span className="shrink-0 text-[11px] tabular-nums text-muted" title={`Estimated at ${WORDS_PER_SEC} words per second`}>
+                ≈ {fmtDur(total)} total
+              </span>
+            </div>
           )}
-        </div>
+
+          {job && <JobStatusBar job={job} showLog={showLog} setShowLog={setShowLog} logRef={logRef} onOpenEditor={(file) => openTab({ kind: "video", file }, "Video editor")} onCopySrt={copySrt} />}
+
+          <div className="min-h-0 flex-1 @3xl:overflow-y-auto">
+            {jobError ? (
+              <ErrorState title="Couldn’t load this production" error={jobError} onRetry={reloadJob} />
+            ) : jobId && !job ? (
+              <div className="mx-auto max-w-4xl space-y-3 p-4" aria-busy="true" aria-label="Loading">
+                <Skeleton className="h-7 w-48" />
+                <Skeleton className="h-[132px] w-full" />
+                <Skeleton className="h-[132px] w-full" />
+              </div>
+            ) : !plan ? (
+              <div className="grid h-full place-items-center py-8">
+                <EmptyState
+                  icon={Sparkles}
+                  title="No script yet"
+                  hint="Write a brief and draft a script, or write one yourself. You can edit every line before producing."
+                  secondary={{ label: "Write manually", onClick: () => setPlan(emptyPlan(mode)) }}
+                />
+              </div>
+            ) : (
+              <div className="p-4">
+                {mode === "video" ? (
+                  <VideoEditor plan={plan as VideoPlan} setPlan={setPlan} />
+                ) : mode === "voiceover" ? (
+                  <VoiceoverEditor plan={plan as VoiceoverPlan} setPlan={setPlan} />
+                ) : (
+                  <PodcastEditor plan={plan as PodcastPlan} setPlan={setPlan} />
+                )}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
+
+function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-b border-line px-4 pb-4 pt-3 last:border-b-0">
+      <h2 className="section-title mb-3">{title}</h2>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, htmlFor, help, children }: { label: string; htmlFor?: string; help?: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <label className="label truncate" htmlFor={htmlFor} title={label}>
+        {label}
+      </label>
+      {children}
+      {help && <p className="help">{help}</p>}
+    </div>
+  );
+}
+
+const STATUS_TONE: Record<MediaJob["status"], Tone> = { queued: "warn", running: "accent", done: "ok", error: "err", cancelled: "neutral" };
+const STATUS_LABEL: Record<MediaJob["status"], string> = { queued: "Queued", running: "Producing", done: "Done", error: "Failed", cancelled: "Cancelled" };
 
 function JobStatusBar({
   job,
@@ -581,22 +660,22 @@ function JobStatusBar({
   const color = job.status === "done" ? "bg-ok" : job.status === "error" ? "bg-err" : job.status === "cancelled" ? "bg-faint" : "bg-accent";
   const src = job.output ? `/api/media/${encodeURIComponent(job.output)}` : "";
   const isVideo = job.output?.endsWith(".mp4");
+  const pct = job.status === "done" ? 100 : job.progress;
+  const detail = job.status === "error" ? job.error : job.step;
   return (
     <div className="shrink-0 border-b border-line bg-side">
-      <div className="flex items-center gap-3 px-3 py-2">
-        <span className="w-16 shrink-0 text-[11px] uppercase tracking-wide text-muted">{job.status}</span>
-        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded bg-elev">
-          <div className={`h-full ${color} transition-[width] duration-500`} style={{ width: `${job.status === "done" ? 100 : job.progress}%` }} />
-        </div>
-        <span className="w-10 shrink-0 text-right text-[11px] text-muted">{job.status === "done" ? 100 : job.progress}%</span>
-      </div>
-      <div className="flex items-center gap-2 px-3 pb-2">
-        <button className="icon-btn h-5 w-5" onClick={() => setShowLog(!showLog)} title="Toggle log">
+      <div className="flex h-9 items-center gap-2 px-3">
+        <button className="icon-btn" onClick={() => setShowLog(!showLog)} aria-label={showLog ? "Hide log" : "Show log"} aria-expanded={showLog} title={showLog ? "Hide log" : "Show log"}>
           {showLog ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </button>
-        <span className={`min-w-0 flex-1 truncate text-[12px] ${job.status === "error" ? "text-err" : "text-muted"}`}>
-          {job.status === "error" ? job.error : job.step}
+        <Pill tone={STATUS_TONE[job.status] ?? "neutral"}>{STATUS_LABEL[job.status] ?? job.status}</Pill>
+        <span className={`min-w-0 flex-1 truncate text-[12px] ${job.status === "error" ? "text-err" : "text-muted"}`} title={detail ?? undefined}>
+          {detail}
         </span>
+        <div className="h-1 w-24 shrink-0 overflow-hidden rounded-sm bg-elev @xl:w-40" role="progressbar" aria-label="Production progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+          <div className={`h-full ${color} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-muted">{pct}%</span>
       </div>
       {showLog && (
         <pre ref={logRef} className="mx-3 mb-2 max-h-48 overflow-auto rounded border border-line bg-editor p-2 font-mono text-[11px] leading-relaxed text-muted">
@@ -604,27 +683,31 @@ function JobStatusBar({
         </pre>
       )}
       {job.status === "done" && job.output && (
-        <div className="flex flex-wrap items-start gap-3 border-t border-line px-3 py-3">
+        <div className="flex flex-col gap-3 border-t border-line px-3 py-3 @xl:flex-row @xl:items-start">
           {isVideo ? (
-            <video key={src} src={src} controls className="max-h-[360px] max-w-full rounded bg-black" />
+            <video key={src} src={src} controls className="max-h-[360px] min-w-0 max-w-full rounded-[6px] border border-line bg-bg" />
           ) : (
             <audio key={src} src={src} controls className="w-full max-w-md" />
           )}
-          <div className="flex flex-col gap-2">
-            <span className="font-mono text-[11.5px] text-fg">{job.output}</span>
-            {isVideo && (
-              <button className="btn" onClick={() => onOpenEditor(job.output!)}>
-                <Film size={13} /> Open in Video Editor
-              </button>
-            )}
-            <a className="btn" href={`${src}?download=1`}>
-              <Download size={13} /> Download
-            </a>
-            {job.srt && (
-              <button className="btn" onClick={onCopySrt}>
-                <Copy size={13} /> Copy SRT
-              </button>
-            )}
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="truncate font-mono text-[11px] text-fg" title={job.output}>
+              {job.output}
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {isVideo && (
+                <button className="btn btn-sm" onClick={() => onOpenEditor(job.output!)}>
+                  <Film size={13} /> Open in video editor
+                </button>
+              )}
+              <a className="btn btn-sm" href={`${src}?download=1`}>
+                <Download size={13} /> Download
+              </a>
+              {job.srt && (
+                <button className="btn btn-sm" onClick={onCopySrt}>
+                  <Copy size={13} /> Copy SRT
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -632,17 +715,17 @@ function JobStatusBar({
   );
 }
 
-function RowActions({ i, n, onMove, onRemove }: { i: number; n: number; onMove: (d: number) => void; onRemove: () => void }) {
+function RowActions({ i, n, what, onMove, onRemove }: { i: number; n: number; what: string; onMove: (d: number) => void; onRemove: () => void }) {
   return (
     <>
-      <button className="icon-btn h-5 w-5" disabled={i === 0} onClick={() => onMove(-1)} title="Move up">
-        <ArrowUp size={12} />
+      <button className="icon-btn" disabled={i === 0} onClick={() => onMove(-1)} aria-label={`Move ${what} up`} title="Move up">
+        <ArrowUp size={13} />
       </button>
-      <button className="icon-btn h-5 w-5" disabled={i === n - 1} onClick={() => onMove(1)} title="Move down">
-        <ArrowDown size={12} />
+      <button className="icon-btn" disabled={i === n - 1} onClick={() => onMove(1)} aria-label={`Move ${what} down`} title="Move down">
+        <ArrowDown size={13} />
       </button>
-      <button className="icon-btn h-5 w-5" disabled={n <= 1} onClick={onRemove} title="Remove">
-        <X size={12} />
+      <button className="icon-btn" disabled={n <= 1} onClick={onRemove} aria-label={`Remove ${what}`} title="Remove">
+        <X size={13} />
       </button>
     </>
   );
@@ -652,25 +735,27 @@ function VideoEditor({ plan, setPlan }: { plan: VideoPlan; setPlan: (p: AnyPlan)
   const setScene = (i: number, patch: Partial<Scene>) => setPlan({ ...plan, scenes: plan.scenes.map((s, j) => (j === i ? { ...s, ...patch } : s)) });
   return (
     <div className="mx-auto max-w-4xl space-y-3">
-      <label className="flex max-w-sm items-center gap-2">
-        <span className="label mb-0 shrink-0">Music mood</span>
-        <input className="input h-7" value={plan.musicMood} onChange={(e) => setPlan({ ...plan, musicMood: e.target.value })} />
-      </label>
+      <div className="flex max-w-sm items-center gap-2">
+        <label className="label mb-0 shrink-0" htmlFor="cs-mood">
+          Music mood
+        </label>
+        <input id="cs-mood" className="input input-sm" value={plan.musicMood} onChange={(e) => setPlan({ ...plan, musicMood: e.target.value })} />
+      </div>
       {plan.scenes.map((s, i) => {
         const speech = estimateSpeechSec(s.narration);
         const over = speech + 0.5 > s.durationSec;
         return (
-          <div key={i} className="card p-3">
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-[12.5px] font-medium">Scene {i + 1}</span>
-              <span className={`text-[11px] ${over ? "text-warn" : "text-faint"}`} title="Narration is spoken at about 2.5 words/sec; the scene stretches to fit it">
+          <div key={i} className="card">
+            <div className="flex h-9 items-center gap-2 border-b border-line pl-3 pr-1.5">
+              <span className="text-[13px] font-semibold">Scene {i + 1}</span>
+              <span className={`truncate text-[11px] ${over ? "text-warn" : "text-faint"}`} title="Narration is spoken at about 2.5 words per second; the scene stretches to fit it">
                 ~{speech.toFixed(1)}s speech
               </span>
               <div className="flex-1" />
-              <label className="flex items-center gap-1 text-[11px] text-muted">
+              <label className="flex shrink-0 items-center gap-1 text-[11px] text-muted">
                 Duration
                 <input
-                  className="input h-6 w-16"
+                  className="input input-sm w-16"
                   type="number"
                   min={1}
                   max={120}
@@ -683,12 +768,13 @@ function VideoEditor({ plan, setPlan }: { plan: VideoPlan; setPlan: (p: AnyPlan)
               <RowActions
                 i={i}
                 n={plan.scenes.length}
+                what={`scene ${i + 1}`}
                 onMove={(d) => setPlan({ ...plan, scenes: move(plan.scenes, i, d) })}
                 onRemove={() => setPlan({ ...plan, scenes: plan.scenes.filter((_, j) => j !== i) })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="col-span-2">
+            <div className="grid grid-cols-1 gap-2 p-3 @xl:grid-cols-2">
+              <label className="@xl:col-span-2">
                 <span className="label">Narration</span>
                 <textarea className="input" rows={2} value={s.narration} onChange={(e) => setScene(i, { narration: e.target.value })} />
               </label>
@@ -704,7 +790,7 @@ function VideoEditor({ plan, setPlan }: { plan: VideoPlan; setPlan: (p: AnyPlan)
           </div>
         );
       })}
-      <button className="btn" onClick={() => setPlan({ ...plan, scenes: [...plan.scenes, { ...EMPTY_SCENE }] })} disabled={plan.scenes.length >= 40}>
+      <button className="btn btn-sm" onClick={() => setPlan({ ...plan, scenes: [...plan.scenes, { ...EMPTY_SCENE }] })} disabled={plan.scenes.length >= 40}>
         <Plus size={13} /> Add scene
       </button>
     </div>
@@ -716,19 +802,21 @@ function VoiceoverEditor({ plan, setPlan }: { plan: VoiceoverPlan; setPlan: (p: 
     <div className="mx-auto max-w-3xl space-y-2">
       {plan.segments.map((s, i) => (
         <div key={i} className="flex items-start gap-2">
-          <span className="w-6 shrink-0 pt-1.5 text-right text-[11px] text-faint">{i + 1}</span>
+          <span className="w-6 shrink-0 pt-1.5 text-right text-[11px] tabular-nums text-faint">{i + 1}</span>
           <textarea
-            className="input flex-1"
+            className="input min-w-0 flex-1"
             rows={2}
+            aria-label={`Segment ${i + 1}`}
             value={s.text}
             onChange={(e) => setPlan({ ...plan, segments: plan.segments.map((x, j) => (j === i ? { text: e.target.value } : x)) })}
           />
-          <div className="flex shrink-0 flex-col items-center pt-0.5">
-            <span className="text-[10.5px] text-faint">{estimateSpeechSec(s.text).toFixed(1)}s</span>
+          <div className="flex shrink-0 flex-col items-center">
+            <span className="text-[11px] tabular-nums text-faint">{estimateSpeechSec(s.text).toFixed(1)}s</span>
             <div className="flex">
               <RowActions
                 i={i}
                 n={plan.segments.length}
+                what={`segment ${i + 1}`}
                 onMove={(d) => setPlan({ ...plan, segments: move(plan.segments, i, d) })}
                 onRemove={() => setPlan({ ...plan, segments: plan.segments.filter((_, j) => j !== i) })}
               />
@@ -736,7 +824,7 @@ function VoiceoverEditor({ plan, setPlan }: { plan: VoiceoverPlan; setPlan: (p: 
           </div>
         </div>
       ))}
-      <button className="btn ml-8" onClick={() => setPlan({ ...plan, segments: [...plan.segments, { text: "" }] })}>
+      <button className="btn btn-sm ml-8" onClick={() => setPlan({ ...plan, segments: [...plan.segments, { text: "" }] })}>
         <Plus size={13} /> Add segment
       </button>
     </div>
@@ -747,40 +835,45 @@ function PodcastEditor({ plan, setPlan }: { plan: PodcastPlan; setPlan: (p: AnyP
   const setLine = (i: number, patch: Partial<PodcastPlan["lines"][number]>) => setPlan({ ...plan, lines: plan.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
   return (
     <div className="mx-auto max-w-3xl space-y-2">
-      <div className="mb-3 flex gap-2">
+      <div className="mb-3 grid grid-cols-1 gap-2 @xl:grid-cols-2">
         {[0, 1].map((h) => (
-          <label key={h} className="flex flex-1 items-center gap-2">
+          <label key={h} className="flex min-w-0 items-center gap-2">
             <span className="label mb-0 shrink-0">Host {h + 1}</span>
             <input
-              className="input h-7"
+              className="input input-sm"
               value={plan.hosts[h]}
               onChange={(e) => setPlan({ ...plan, hosts: (h === 0 ? [e.target.value, plan.hosts[1]] : [plan.hosts[0], e.target.value]) as [string, string] })}
             />
           </label>
         ))}
       </div>
-      {plan.lines.map((l, i) => (
-        <div key={i} className="flex items-start gap-2">
-          <button
-            className={`mt-0.5 h-7 w-24 shrink-0 truncate rounded border px-2 text-[11.5px] ${l.speaker === 0 ? "border-accent text-accent" : "border-line text-ok"}`}
-            onClick={() => setLine(i, { speaker: l.speaker === 0 ? 1 : 0 })}
-            title="Toggle speaker"
-          >
-            {plan.hosts[l.speaker] || `Host ${l.speaker + 1}`}
-          </button>
-          <textarea className="input flex-1" rows={2} value={l.text} onChange={(e) => setLine(i, { text: e.target.value })} />
-          <div className="flex shrink-0 pt-1">
-            <RowActions
-              i={i}
-              n={plan.lines.length}
-              onMove={(d) => setPlan({ ...plan, lines: move(plan.lines, i, d) })}
-              onRemove={() => setPlan({ ...plan, lines: plan.lines.filter((_, j) => j !== i) })}
-            />
+      {plan.lines.map((l, i) => {
+        const name = plan.hosts[l.speaker] || `Host ${l.speaker + 1}`;
+        return (
+          <div key={i} className="flex items-start gap-2">
+            <button
+              className={`btn btn-sm mt-0.5 w-24 shrink-0 justify-start ${l.speaker === 0 ? "text-accent" : "text-ok"}`}
+              onClick={() => setLine(i, { speaker: l.speaker === 0 ? 1 : 0 })}
+              aria-label={`Speaker: ${name}. Switch speaker`}
+              title="Switch speaker"
+            >
+              <span className="truncate">{name}</span>
+            </button>
+            <textarea className="input min-w-0 flex-1" rows={2} aria-label={`Line ${i + 1}`} value={l.text} onChange={(e) => setLine(i, { text: e.target.value })} />
+            <div className="flex shrink-0">
+              <RowActions
+                i={i}
+                n={plan.lines.length}
+                what={`line ${i + 1}`}
+                onMove={(d) => setPlan({ ...plan, lines: move(plan.lines, i, d) })}
+                onRemove={() => setPlan({ ...plan, lines: plan.lines.filter((_, j) => j !== i) })}
+              />
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <button
-        className="btn ml-[104px]"
+        className="btn btn-sm ml-[104px]"
         onClick={() => setPlan({ ...plan, lines: [...plan.lines, { speaker: plan.lines.length ? (plan.lines[plan.lines.length - 1].speaker === 0 ? 1 : 0) : 0, text: "" }] })}
       >
         <Plus size={13} /> Add line

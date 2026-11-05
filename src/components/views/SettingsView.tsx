@@ -11,6 +11,7 @@ import { openSettingsJson, openShortcuts } from "@/components/workbench/actions"
 import { shortcut } from "@/components/workbench/shortcuts";
 import { BUILTIN_CHOICES, ThemePreview, applyThemeChoice, browseThemes, choiceOf, currentChoiceId, openThemePicker } from "@/components/workbench/ThemePicker";
 import { Palette, Plus } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty";
 
 /** Scroll-anchor id of a settings category section (Appearance keeps the historical `settings-appearance`). */
 export const categoryAnchor = (c: SettingCategory) => (c === "Appearance" ? "settings-appearance" : `settings-cat-${c.toLowerCase()}`);
@@ -31,6 +32,14 @@ export const SETTINGS_TOC: { id: string; label: string }[] = [
   { id: SPECIAL.registries.id, label: SPECIAL.registries.label },
   { id: SPECIAL.shortcuts.id, label: SPECIAL.shortcuts.label },
 ];
+
+/** Schema titles are Title Case ("Side Bar Location"); the UI shows sentence case ("Side bar location"). Acronyms (UI, JSON) stay. */
+export function sentenceCase(t: string): string {
+  return t
+    .split(" ")
+    .map((w, i) => (i === 0 || /^[A-Z0-9]{2,}$/.test(w) ? w : w.toLowerCase()))
+    .join(" ");
+}
 
 function matches(def: SettingDef, terms: string[]): boolean {
   if (!terms.length) return true;
@@ -105,7 +114,7 @@ export default function SettingsView() {
     if (!defs.length && !extra) return null;
     return (
       <section key={c} id={categoryAnchor(c)} className="scroll-mt-2" aria-labelledby={`${categoryAnchor(c)}-h`}>
-        <h2 id={`${categoryAnchor(c)}-h`} className="mb-1 mt-6 border-b border-line pb-1.5 text-[15px] font-semibold first:mt-0">
+        <h2 id={`${categoryAnchor(c)}-h`} className="section-h mb-1 mt-8 border-b border-line pb-2 first:mt-0">
           {c}
         </h2>
         {defs.map((d) => (
@@ -118,71 +127,70 @@ export default function SettingsView() {
 
   return (
     <div className="@container flex h-full flex-col">
-      <div className="shrink-0 border-b border-line px-4 pb-2 pt-3 @[720px]:px-6">
-        <div className="mx-auto flex max-w-5xl items-center gap-2">
-          <div className="relative min-w-0 flex-1">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" aria-hidden />
-            <input
-              ref={searchRef}
-              type="search"
-              className="input !h-[30px] !pl-8 !pr-24 !text-[13px]"
-              placeholder="Search settings"
-              aria-label="Search settings"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Escape" && query && (e.stopPropagation(), setQuery(""))}
-            />
-            <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
-              {searching && (
-                <span className="text-[11px] text-faint" aria-live="polite">
-                  {visible.length} {visible.length === 1 ? "setting" : "settings"}
-                </span>
-              )}
-              {query && (
-                <button className="icon-btn !h-5 !w-5" aria-label="Clear search" onClick={() => setQuery("")}>
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+      <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-line px-3 @[760px]:px-4" role="toolbar" aria-label="Settings">
+        <div className="relative min-w-0 flex-1">
+          <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" aria-hidden />
+          <input
+            ref={searchRef}
+            type="search"
+            className="input !pl-8 !pr-24"
+            placeholder="Search settings"
+            aria-label="Search settings"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && query && (e.stopPropagation(), setQuery(""))}
+          />
+          <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            {searching && (
+              <span className="text-[11px] tabular-nums text-faint" aria-live="polite">
+                {visible.length} {visible.length === 1 ? "setting" : "settings"}
+              </span>
+            )}
+            {query && (
+              <button className="icon-btn !h-5 !w-5" aria-label="Clear search" title="Clear search (Esc)" onClick={() => setQuery("")}>
+                <X size={12} />
+              </button>
+            )}
           </div>
-          <button
-            className={`btn ${onlyModified ? "border-accent text-fg" : ""}`}
-            aria-pressed={onlyModified}
-            title="Show only modified settings"
-            onClick={() => setQuery(onlyModified ? raw.replace(/(^|\s)@modified(?=\s|$)/g, "").trim() : `@modified ${query}`.trim())}
-          >
-            @modified{modifiedCount ? <span className="badge !shadow-none">{modifiedCount}</span> : null}
-          </button>
-          <button className="btn" title="Open Settings (JSON)" aria-label="Open Settings (JSON)" onClick={openSettingsJson}>
-            <FileJson size={13} /> <span className="hidden @[560px]:inline">Open JSON</span>
-          </button>
-          <button
-            className="btn"
-            disabled={!modifiedCount}
-            onClick={() =>
-              void confirmDialog({ title: "Reset all settings?", message: `${modifiedCount} customized setting${modifiedCount === 1 ? "" : "s"} will return to the default.`, confirmLabel: "Reset all", danger: true }).then((ok) => ok && resetAll())
-            }
-          >
-            <RotateCcw size={13} /> <span className="hidden @[560px]:inline">Reset All</span>
-          </button>
         </div>
+        <button
+          className={`btn btn-sm shrink-0 ${onlyModified ? "!border-accent !bg-active !text-fg" : ""}`}
+          aria-pressed={onlyModified}
+          title="Show only settings you changed (@modified)"
+          onClick={() => setQuery(onlyModified ? raw.replace(/(^|\s)@modified(?=\s|$)/g, "").trim() : `@modified ${query}`.trim())}
+        >
+          Modified
+          <span className="count">{modifiedCount}</span>
+        </button>
+        <button className="icon-btn icon-btn-lg shrink-0" title="Open settings.json" aria-label="Open settings.json" onClick={openSettingsJson}>
+          <FileJson size={15} />
+        </button>
+        <button
+          className="btn btn-ghost btn-sm shrink-0"
+          disabled={!modifiedCount}
+          title={modifiedCount ? "Reset every changed setting to its default" : "No settings changed"}
+          onClick={() =>
+            void confirmDialog({ title: "Reset all settings?", message: `${modifiedCount} changed setting${modifiedCount === 1 ? "" : "s"} will return to the default.`, confirmLabel: "Reset all", danger: true }).then((ok) => ok && resetAll())
+          }
+        >
+          <RotateCcw size={13} /> <span className="hidden @[560px]:inline">Reset all…</span>
+        </button>
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <nav aria-label="Settings table of contents" className="hidden w-48 shrink-0 overflow-y-auto border-r border-line py-3 @[720px]:block">
-          {SETTINGS_TOC.map((t) => (
-            <button
-              key={t.id}
-              className={`block w-full truncate px-5 py-[3px] text-left text-[12.5px] ${!searching && current === t.id ? "font-semibold text-fg" : "text-muted hover:text-fg"}`}
-              aria-current={!searching && current === t.id ? "true" : undefined}
-              onClick={() => goto(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <nav aria-label="Settings sections" className="hidden w-48 shrink-0 overflow-y-auto border-r border-line bg-side py-2 @[760px]:block">
+          {SETTINGS_TOC.map((t) => {
+            const label = sentenceCase(t.label);
+            const on = !searching && current === t.id;
+            return (
+              <button key={t.id} className={`row w-full !px-4 text-left ${on ? "font-medium" : "text-muted hover:text-fg"}`} aria-current={on ? "true" : undefined} onClick={() => goto(t.id)} title={label}>
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
         </nav>
         <div ref={scroller} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto max-w-4xl px-4 pb-24 pt-3 @[720px]:px-8">
+          <div className="mx-auto max-w-4xl px-4 pb-24 pt-4 @[760px]:px-8">
             {categorySection("Workbench")}
             {categorySection("Appearance")}
             {categorySection("Editor")}
@@ -209,7 +217,7 @@ export default function SettingsView() {
             )}
             {specialVisible("shortcuts") && <ShortcutsSection />}
             {searching && !visible.length && !Object.keys(SPECIAL).some((k) => specialVisible(k as keyof typeof SPECIAL)) && (
-              <div className="py-10 text-center text-muted">No settings found{onlyModified ? " (no modified settings match)" : ""}.</div>
+              <EmptyState icon={Search} title={onlyModified && !terms.length ? "No changed settings" : "No settings found"} hint={onlyModified ? "Only settings you changed are shown. Turn off Modified to see all." : "Try a different word, or a setting ID like editor.fontSize."} secondary={{ label: "Clear search", onClick: () => setQuery("") }} />
             )}
           </div>
         </div>
@@ -228,14 +236,14 @@ function SettingRow({ def }: { def: SettingDef }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const controlId = `setting-${def.key}`;
   const [group, ...rest] = def.title.includes(": ") ? def.title.split(": ") : [null, def.title];
-  const title = rest.join(": ");
+  const title = sentenceCase(rest.join(": "));
 
   return (
     <div
       id={controlId + "-row"}
       data-setting={def.key}
       data-modified={modified || undefined}
-      className="group relative -mx-3 rounded px-3 py-2.5 hover:bg-hover/40 focus-within:bg-hover/40"
+      className="group relative -mx-3 rounded px-3 py-3 hover:bg-hover/40 focus-within:bg-hover/40"
     >
       {modified && <span className="absolute bottom-2 left-0 top-2 w-[2px] rounded bg-accent" aria-hidden />}
       <div className="flex items-start gap-1">
@@ -243,12 +251,12 @@ function SettingRow({ def }: { def: SettingDef }) {
           <div className="text-[13px]">
             <span className="text-muted">
               {def.category}
-              {group ? ` › ${group}` : ""}:{" "}
+              {group ? ` › ${sentenceCase(group)}` : ""}:{" "}
             </span>
             <label htmlFor={def.type === "boolean" || def.type === "color" ? undefined : controlId} className="font-semibold">
               {title}
             </label>
-            {modified && <span className="ml-2 text-[11px] italic text-faint">Modified</span>}
+            {modified && <span className="ml-2 text-[11px] text-faint">Modified</span>}
           </div>
           {def.type !== "boolean" && <div className="mt-0.5 text-[12px] leading-relaxed text-muted">{def.description}</div>}
         </div>
@@ -275,10 +283,10 @@ function SettingRow({ def }: { def: SettingDef }) {
           label="Setting actions"
           onClose={() => setMenu(null)}
           items={[
-            { label: "Reset Setting", icon: RotateCcw, disabled: !modified, onSelect: () => reset(def.key) },
+            { label: "Reset setting", icon: RotateCcw, disabled: !modified, onSelect: () => reset(def.key) },
             { type: "separator" },
-            { label: "Copy Setting ID", onSelect: () => void navigator.clipboard?.writeText(def.key) },
-            { label: "Copy Setting as JSON", onSelect: () => void navigator.clipboard?.writeText(`"${def.key}": ${JSON.stringify(value)}`) },
+            { label: "Copy setting ID", onSelect: () => void navigator.clipboard?.writeText(def.key) },
+            { label: "Copy setting as JSON", onSelect: () => void navigator.clipboard?.writeText(`"${def.key}": ${JSON.stringify(value)}`) },
           ]}
         />
       )}
@@ -304,23 +312,23 @@ function ThemeGallery() {
               key={c.id}
               role="radio"
               aria-checked={on}
-              className={`group/theme rounded-lg border p-1.5 text-left transition-colors ${on ? "border-accent bg-active/40" : "border-line hover:border-fg/40"}`}
+              className={`group/theme rounded-[6px] border p-1.5 text-left transition-colors ${on ? "border-accent bg-active/40" : "border-line hover:border-fg/40"}`}
               onClick={() => applyThemeChoice(c.id)}
             >
               <ThemePreview colors={c.colors} split={c.kind === "system" ? light : undefined} className="h-16 w-full" />
               <span className="mt-1.5 flex items-center gap-1 px-0.5 text-[12px]">
                 <span className="min-w-0 flex-1 truncate font-medium">{c.label}</span>
-                <span className="shrink-0 text-[10.5px] text-faint">{c.group === "Built-in" ? "Built-in" : c.kind === "light" ? "Light" : "Dark"}</span>
+                <span className="shrink-0 text-[11px] text-faint">{c.group === "Built-in" ? "Built-in" : c.kind === "light" ? "Light" : "Dark"}</span>
               </span>
             </button>
           );
         })}
-        <button className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-line p-1.5 text-[12px] text-muted hover:border-fg/40 hover:text-fg" onClick={browseThemes}>
+        <button className="flex min-h-[96px] flex-col items-center justify-center gap-1 rounded-[6px] border border-dashed border-line p-1.5 text-[12px] text-muted hover:border-fg/40 hover:text-fg" onClick={browseThemes}>
           <Plus size={16} /> Get more themes
         </button>
       </div>
-      <button className="btn mt-2.5" onClick={openThemePicker}>
-        <Palette size={13} /> Color Theme picker <span className="kbd">{shortcut("colorTheme")}</span>
+      <button className="btn btn-sm mt-2.5" onClick={openThemePicker}>
+        <Palette size={13} /> Open theme picker <span className="kbd">{shortcut("colorTheme")}</span>
       </button>
     </div>
   );
@@ -330,7 +338,7 @@ function Control({ def, value, id, onChange }: { def: SettingDef; value: Setting
   switch (def.type) {
     case "boolean":
       return (
-        <label className="flex cursor-pointer items-start gap-2 text-[12px] leading-relaxed text-muted">
+        <label className="flex items-start gap-2 text-[12px] leading-relaxed text-muted">
           <input id={id} type="checkbox" className="mt-[3px] h-3.5 w-3.5 shrink-0 accent-[var(--accent)]" checked={value as boolean} onChange={(e) => onChange(e.target.checked)} />
           <span>{def.description}</span>
         </label>
@@ -374,7 +382,7 @@ function Control({ def, value, id, onChange }: { def: SettingDef; value: Setting
             />
           ))}
           <label className="ml-1 flex items-center gap-1.5 text-[11.5px] text-muted" title="Custom color">
-            <input type="color" className="h-6 w-8 cursor-pointer rounded border border-line bg-transparent" value={(value as string) || "#3574f0"} onChange={(e) => onChange(e.target.value)} aria-label="Custom accent color" />
+            <input type="color" className="h-6 w-8 rounded border border-line bg-transparent" value={(value as string) || "#3574f0"} onChange={(e) => onChange(e.target.value)} aria-label="Custom accent color" />
             Custom
           </label>
         </div>
@@ -443,8 +451,10 @@ function ShortcutsSection() {
     ["Open terminal", shortcut("terminal")],
   ];
   return (
-    <section id={SPECIAL.shortcuts.id} className="card mt-6 scroll-mt-2 space-y-3 p-4">
-      <h2 className="section-title">Keyboard shortcuts</h2>
+    <section id={SPECIAL.shortcuts.id} className="mt-8 scroll-mt-2 space-y-3" aria-labelledby={`${SPECIAL.shortcuts.id}-h`}>
+      <h2 id={`${SPECIAL.shortcuts.id}-h`} className="section-h border-b border-line pb-2">
+        Keyboard shortcuts
+      </h2>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
         {rows.map(([l, k]) => (
           <span key={l}>
@@ -452,7 +462,7 @@ function ShortcutsSection() {
           </span>
         ))}
       </div>
-      <button className="btn" onClick={openShortcuts}>
+      <button className="btn btn-sm" onClick={openShortcuts}>
         <Keyboard size={13} /> Show all shortcuts
       </button>
     </section>

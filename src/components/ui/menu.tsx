@@ -39,6 +39,19 @@ export function Menu(props: MenuProps) {
   const { onClose, ignoreOutside } = props;
   const rootClose = useRef(onClose);
   rootClose.current = onClose;
+  // Whatever had focus when the menu opened (usually its trigger) gets it back when the menu closes.
+  const opener = useRef<Element | null>(typeof document === "undefined" ? null : document.activeElement);
+
+  useEffect(
+    () => () => {
+      const el = opener.current as HTMLElement | null;
+      const a = document.activeElement;
+      // Only when focus would otherwise be lost (still inside the closed menu, or on <body>).
+      const lost = !a || a === document.body || !a.isConnected || !!a.closest?.(`[data-menu-tree="${CSS.escape(tree)}"]`);
+      if (lost && el?.isConnected && typeof el.focus === "function") el.focus({ preventScroll: true });
+    },
+    [tree],
+  );
 
   useEffect(() => {
     const down = (e: MouseEvent) => {
@@ -143,7 +156,7 @@ function MenuPanel({
         aria-label={label}
         tabIndex={-1}
         data-menu-tree={tree}
-        className="fixed z-[65] rounded-md border border-line bg-elev py-1 text-[12.5px] shadow-2xl outline-none"
+        className="popover fixed z-[65] py-1 text-[12.5px] text-fg"
         style={{ left: pos.left, top: pos.top, minWidth, outline: "none" }}
         onContextMenu={(e) => e.preventDefault()}
         onMouseEnter={() => anchor && document.activeElement !== ref.current && ref.current?.focus({ preventScroll: true })}
@@ -181,7 +194,7 @@ function MenuPanel({
           if (it.type === "separator") return <div key={i} role="separator" className="mx-2 my-1 h-px bg-line" />;
           if (it.type === "header")
             return (
-              <div key={i} className="px-3 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-faint" role="presentation">
+              <div key={i} className="section-title flex h-[24px] items-center px-3 !text-faint" role="presentation">
                 {it.label}
               </div>
             );
@@ -208,16 +221,16 @@ function MenuPanel({
                 }, isSub ? 120 : 220);
               }}
               onClick={() => select(i)}
-              className={`mx-1 flex h-[26px] cursor-pointer items-center gap-2 rounded pl-2 pr-2 ${it.disabled ? "cursor-default opacity-45" : ""} ${
-                highlighted ? "bg-active" : ""
-              } ${!isSub && (it as MenuAction).danger ? "text-err" : ""}`}
+              className={`mx-1 flex h-[24px] items-center gap-2 rounded-[4px] pl-1.5 pr-2 ${it.disabled ? "text-faint" : ""} ${highlighted ? "bg-active" : ""} ${
+                !isSub && (it as MenuAction).danger && !it.disabled ? "text-err" : ""
+              }`}
             >
-              <span className="flex w-4 justify-center" aria-hidden>
+              <span className={`flex w-4 shrink-0 justify-center ${checked ? "text-accent" : "text-muted"}`} aria-hidden>
                 {checked ? <Check size={13} strokeWidth={2.2} /> : Icon ? <Icon size={13} /> : null}
               </span>
               {!isSub && (it as MenuAction).lead}
               <span className="min-w-0 flex-1 truncate">{it.label}</span>
-              {!isSub && (it as MenuAction).hint && <span className="ml-6 shrink-0 text-[11.5px] text-faint">{(it as MenuAction).hint}</span>}
+              {!isSub && (it as MenuAction).hint && <span className="ml-6 shrink-0 text-right text-[11.5px] tabular-nums text-faint">{(it as MenuAction).hint}</span>}
               {isSub && <ChevronRight size={13} className="ml-4 shrink-0 text-faint" aria-hidden />}
             </div>
           );

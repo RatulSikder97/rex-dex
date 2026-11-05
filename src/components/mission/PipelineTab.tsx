@@ -1,63 +1,49 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import {
-  ArrowRight,
-  ChevronDown,
-  CircleAlert,
-  Film,
-  ListTodo,
-  Loader2,
-  Mic,
-  Network,
-  PackageOpen,
-  Rocket,
-  Send,
-  Sparkles,
-  SquareKanban,
-  Wand2,
-  Zap,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, ChevronDown, Film, Loader2, Mic, Network, Rocket, Send, Sparkles, SquareKanban, Wand2, Workflow, type LucideIcon } from "lucide-react";
 import { api, timeAgo } from "@/lib/client";
 import { STAGES, TASK_STATUSES, type Priority, type Run, type Stage, type Task, type TaskStatus } from "@/lib/types";
 import { useActiveProject, useAgents, useDepartments, useWorkbench } from "@/store/workbench";
 import { createSwarm, isActive, openSwarm, openSwarmList, useSwarms, type Swarm } from "@/components/swarm/api";
 import { StepBar, SWARM_META, progressOf } from "@/components/swarm/ui";
 import { swarmTask } from "@/components/swarm/api";
+import { ErrorState, LoadingRows, Tabs } from "@/components/ui/kit";
+import { EmptyState, Skeleton } from "@/components/ui/empty";
 import { briefTitle, elapsed, useMissionData, useNow } from "./data";
 import { useIssues } from "./IssuesTab";
 import { focusConversation, openPage, showWorkspace } from "./nav";
 import { DeptAvatar, Section, SectionAction, StatusDot } from "./ui";
 
 const STATUS_LABEL: Record<TaskStatus, string> = { backlog: "Backlog", todo: "To do", doing: "Doing", review: "Review", done: "Done" };
-const LANE_COLOR: Record<TaskStatus, string> = {
-  backlog: "color-mix(in srgb, var(--fg-faint) 55%, transparent)",
-  todo: "color-mix(in srgb, var(--accent) 45%, transparent)",
-  doing: "var(--accent)",
-  review: "var(--warn)",
-  done: "var(--ok)",
-};
 const PRIORITY_COLOR: Record<Priority, string> = { urgent: "var(--err)", high: "var(--warn)", medium: "var(--accent)", low: "var(--fg-faint)" };
 const RECENT_SWARM_MS = 12 * 3600_000;
 const TIMELINE_CAP = 5;
+const LANE_CAP = 8;
 
-/** Pipeline ("Mission board"): summary strip → plan a goal → one activity timeline → work lanes. */
+/** Reload everything the pipeline shows (mission poller + swarms, both keyed on the store version). */
+const reloadAll = (refresh: () => void) => {
+  useWorkbench.getState().bump();
+  refresh();
+};
+
+/** Pipeline ("Mission board"): stage + stats → plan a goal → one activity list → work lanes. */
 export default function PipelineTab() {
   const project = useActiveProject();
   const { runs, jobs, tasks, loaded } = useMissionData();
-  const { swarms } = useSwarms(project?.id);
+  const { swarms, error: swarmError } = useSwarms(project?.id);
   const lanesRef = useRef<HTMLDivElement>(null);
   const activityRef = useRef<HTMLDivElement>(null);
   if (!project) return null;
   const projectJobs = jobs.filter((j) => !j.project_id || j.project_id === project.id);
-  const fresh = loaded && swarms !== null && !tasks.length && !runs.length && !(swarms ?? []).length && !projectJobs.some((j) => j.status === "running" || j.status === "queued");
+  const fresh = loaded && swarms !== null && !swarmError && !tasks.length && !runs.length && !(swarms ?? []).length && !projectJobs.some((j) => j.status === "running" || j.status === "queued");
 
   return (
-    <div className="space-y-6 px-4 pb-6 pt-4">
+    <div className="@container space-y-6 px-4 pb-6 pt-3">
       <SummaryStrip
         stage={project.stage}
         projectId={project.id}
         swarms={swarms ?? []}
+        loaded={loaded}
         onRunning={() => activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
         onTasks={() => lanesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
       />
@@ -67,10 +53,10 @@ export default function PipelineTab() {
       ) : (
         <>
           <div ref={activityRef} className="scroll-mt-3">
-            <ActivityTimeline swarms={swarms ?? []} />
+            <ActivityTimeline swarms={swarms ?? []} loading={!loaded || swarms === null} error={swarmError} />
           </div>
           <div ref={lanesRef} className="scroll-mt-3">
-            <Lanes projectId={project.id} projectName={project.name} />
+            <Lanes projectId={project.id} projectName={project.name} loading={!loaded} />
           </div>
         </>
       )}
@@ -80,40 +66,37 @@ export default function PipelineTab() {
 
 // ---------------------------------------------------------------- summary strip
 
-function SummaryStrip({ stage, projectId, swarms, onRunning, onTasks }: { stage: Stage; projectId: string; swarms: Swarm[]; onRunning: () => void; onTasks: () => void }) {
+function SummaryStrip({ stage, projectId, swarms, loaded, onRunning, onTasks }: { stage: Stage; projectId: string; swarms: Swarm[]; loaded: boolean; onRunning: () => void; onTasks: () => void }) {
   const { runs, jobs, tasks, deliverables, media } = useMissionData();
   const issues = useIssues();
   const running = runs.filter((r) => r.status === "running").length + jobs.filter((j) => j.status === "running" || j.status === "queued").length + swarms.filter(isActive).length;
   const open = tasks.filter((t) => t.status !== "done").length;
   const errors = issues.filter((i) => i.severity === "error").length;
-  const stats: { label: string; n: number; icon: LucideIcon; tone: string; live?: boolean; onClick: () => void; title: string }[] = [
-    { label: "Running", n: running, icon: Zap, tone: "var(--accent)", live: running > 0, onClick: onRunning, title: "Agents, swarms and media jobs working now" },
-    { label: "Open tasks", n: open, icon: ListTodo, tone: "var(--fg-muted)", onClick: onTasks, title: "Tasks not done yet" },
-    { label: "Issues", n: issues.length, icon: CircleAlert, tone: errors ? "var(--err)" : issues.length ? "var(--warn)" : "var(--fg-muted)", onClick: () => showWorkspace("issues"), title: "Open Issues" },
-    { label: "Outputs", n: deliverables.length + media.length, icon: PackageOpen, tone: "var(--ok)", onClick: () => showWorkspace("output"), title: "Open Output" },
+  const stats: { label: string; n: number; tone?: string; live?: boolean; onClick: () => void; title: string }[] = [
+    { label: "Running", n: running, tone: running ? "var(--accent)" : undefined, live: running > 0, onClick: onRunning, title: "Agents, swarms and media jobs working now" },
+    { label: "Open tasks", n: open, onClick: onTasks, title: "Tasks not done yet" },
+    { label: "Issues", n: issues.length, tone: errors ? "var(--err)" : issues.length ? "var(--warn)" : undefined, onClick: () => showWorkspace("issues"), title: "Open Issues" },
+    { label: "Outputs", n: deliverables.length + media.length, onClick: () => showWorkspace("output"), title: "Open Output" },
   ];
   return (
-    <div className="rx-card rx-in overflow-hidden">
+    <section aria-label="Project status" className="space-y-3">
       <StageBar stage={stage} projectId={projectId} />
-      <div className="grid grid-cols-4 border-t border-line">
-        {stats.map((s, i) => (
-          <button
-            key={s.label}
-            className={`rx-press group flex min-w-0 flex-col items-start gap-0.5 px-3 py-2.5 text-left hover:bg-hover ${i ? "border-l border-line" : ""}`}
-            onClick={s.onClick}
-            title={s.title}
-          >
-            <span className="flex items-center gap-1.5 text-[18px] font-semibold leading-tight tabular-nums" style={{ color: s.n ? (s.label === "Open tasks" ? "var(--fg)" : s.tone) : "var(--fg-faint)" }}>
-              {s.live ? <StatusDot color={s.tone} live /> : null}
-              {s.n}
-            </span>
-            <span className="flex w-full items-center gap-1 truncate text-[11px] text-muted group-hover:text-fg">
-              <s.icon size={11} className="shrink-0" /> <span className="truncate">{s.label}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
+      {loaded ? (
+        <div className="-mx-1.5 flex flex-wrap items-center gap-x-1 gap-y-1">
+          {stats.map((s) => (
+            <button key={s.label} type="button" className="flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-[12px] text-muted hover:bg-hover hover:text-fg" onClick={s.onClick} title={s.title}>
+              {s.live && <StatusDot color="var(--accent)" live />}
+              <span>{s.label}</span>
+              <span className={`font-semibold tabular-nums ${s.n ? "" : "text-faint"}`} style={s.n && s.tone ? { color: s.tone } : s.n ? { color: "var(--fg)" } : undefined}>
+                {s.n}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <Skeleton className="h-6 w-72 max-w-full" />
+      )}
+    </section>
   );
 }
 
@@ -135,39 +118,33 @@ function StageBar({ stage, projectId }: { stage: Stage; projectId: string }) {
     }
   };
   return (
-    <div className="px-3 pb-2.5 pt-3">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="rx-label">Stage</span>
+    <div>
+      <div className="mb-1.5 flex h-6 items-center gap-2">
+        <h3 className="rx-label">Stage</h3>
         <span className="text-[12px] font-medium capitalize text-fg">{stage}</span>
-        <span className="text-[11px] text-faint">
-          {current + 1}/{STAGES.length}
+        <span className="text-[11px] tabular-nums text-faint">
+          {current + 1} of {STAGES.length}
         </span>
       </div>
-      <ol className="flex gap-1" aria-label="Project stage">
+      <ol className="flex gap-[2px]" aria-label="Project stage">
         {STAGES.map((s, i) => {
           const on = i === current;
           const reached = i <= current;
           return (
             <li key={s} className="min-w-0 flex-1">
               <button
-                className="rx-press group flex w-full flex-col gap-1.5 rounded-md py-0.5 text-left"
+                type="button"
+                className="group flex w-full flex-col gap-1 rounded-[2px] text-left"
                 aria-current={on ? "step" : undefined}
                 aria-label={`Stage ${s}${on ? " (current)" : ""}`}
                 title={on ? `Current stage: ${s}` : `Move to ${s}`}
                 onClick={() => void set(s)}
               >
                 <span
-                  className={`block h-1.5 w-full rounded-full transition-[background-color,box-shadow] duration-300 ${saving === s ? "rx-indeterminate bg-line" : ""}`}
-                  style={
-                    saving === s
-                      ? undefined
-                      : {
-                          background: reached ? (on ? "var(--accent)" : "color-mix(in srgb, var(--accent) 55%, transparent)") : "var(--border)",
-                          boxShadow: on ? "0 0 10px color-mix(in srgb, var(--accent) 55%, transparent)" : undefined,
-                        }
-                  }
+                  className={`block h-1 w-full rounded-[1px] transition-colors ${saving === s ? "rx-indeterminate bg-line" : ""} ${!reached && saving !== s ? "group-hover:!bg-[color:color-mix(in_srgb,var(--fg-faint)_55%,var(--border))]" : ""}`}
+                  style={saving === s ? undefined : { background: reached ? (on ? "var(--accent)" : "color-mix(in srgb, var(--accent) 50%, var(--border))") : "var(--border)" }}
                 />
-                <span className={`truncate text-[10.5px] capitalize ${on ? "font-semibold text-fg" : reached ? "text-muted" : "text-faint"} group-hover:text-fg`}>{s}</span>
+                <span className={`truncate text-[11px] capitalize ${on ? "font-medium text-fg" : reached ? "text-muted" : "text-faint"} group-hover:text-fg`}>{s}</span>
               </button>
             </li>
           );
@@ -211,21 +188,21 @@ function PlanComposer({ projectId }: { projectId: string }) {
   };
   return (
     <form
-      className="rx-composer rx-in p-3"
-      style={{ ["--i" as string]: 1 }}
+      aria-labelledby={`plan-h-${projectId}`}
       onSubmit={(e) => {
         e.preventDefault();
         void plan();
       }}
     >
-      <label htmlFor={`plan-${projectId}`} className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold">
-        <Wand2 size={13} className="text-accent" /> Plan a goal
-      </label>
+      <header className="mb-2 flex h-6 items-center gap-2">
+        <h3 id={`plan-h-${projectId}`} className="rx-label">
+          <label htmlFor={`plan-${projectId}`}>Plan a goal</label>
+        </h3>
+      </header>
       <textarea
         id={`plan-${projectId}`}
-        rows={2}
-        className="block w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-faint"
-        style={{ outline: "none" }}
+        rows={3}
+        className="input block resize-none text-[13px]"
         placeholder="e.g. Launch a paid tier with Stripe by next month"
         value={goal}
         disabled={!!busy}
@@ -237,21 +214,21 @@ function PlanComposer({ projectId }: { projectId: string }) {
           }
         }}
       />
-      <div className="mt-2 flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate text-[11px] text-faint">
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+        <span className="mr-auto min-w-0 truncate text-[11px] text-faint">
           <span className="kbd">↵</span> plan tasks · <span className="kbd">⌘↵</span> swarm
         </span>
         <button
           type="button"
-          className="rx-press flex h-8 items-center gap-1.5 rounded-lg border border-line bg-elev px-3 text-[12px] text-fg hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] disabled:opacity-45"
+          className="btn btn-sm"
           disabled={!g || !!busy}
           onClick={() => void swarm()}
-          title="Several departments work on this goal in parallel (you review the plan before it runs)"
+          title="Several departments work on this goal in parallel (you review the plan before it runs) (⌘↵)"
         >
-          {busy === "swarm" ? <Loader2 size={13} className="animate-spin" /> : <Network size={13} />} Run as swarm
+          {busy === "swarm" ? <Loader2 size={12} className="animate-spin" /> : <Network size={12} />} Run as swarm
         </button>
-        <button type="submit" className="rx-primary rx-press h-8 rounded-lg px-3 text-[12px]" disabled={!g || !!busy} title="The Chief of Staff breaks the goal into tasks for every department">
-          {busy === "plan" ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {busy === "plan" ? "Planning…" : "Generate plan"}
+        <button type="submit" className="btn btn-primary btn-sm" disabled={!g || !!busy} title="The Chief of Staff breaks the goal into tasks for every department (↵)">
+          {busy === "plan" ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />} {busy === "plan" ? "Planning…" : "Generate plan"}
         </button>
       </div>
     </form>
@@ -270,31 +247,27 @@ function Onboarding() {
       icon: Send,
       action: { label: "Start a swarm", run: () => openSwarmList(true) },
     },
-    { n: 3, title: "Ship & track", hint: "Watch work here, review output, and fix anything flagged in Issues.", icon: Rocket, action: { label: "Open Output", run: () => showWorkspace("output") } },
+    { n: 3, title: "Ship and track", hint: "Watch work here, review output, and fix anything flagged in Issues.", icon: Rocket, action: { label: "Open output", run: () => showWorkspace("output") } },
   ];
   return (
-    <section aria-label="Get started" className="rx-card rx-in relative overflow-hidden p-4" style={{ ["--i" as string]: 2 }}>
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_18%,transparent),transparent)]" aria-hidden />
-      <div className="text-[14px] font-semibold tracking-tight">Get your company moving</div>
-      <ol className="mt-3 space-y-1">
+    <Section title="Get started">
+      <ol className="card divide-y divide-[color:var(--border)]">
         {steps.map((s) => (
-          <li key={s.n} className="flex items-start gap-3 rounded-lg px-1 py-2">
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-line bg-editor text-[11px] font-semibold tabular-nums text-accent">{s.n}</span>
+          <li key={s.n} className="flex items-start gap-3 px-3 py-2.5">
+            <span className="count mt-px !h-5 !min-w-5 !text-[11px]">{s.n}</span>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 text-[13px] font-medium">
-                <s.icon size={13} className="text-faint" /> {s.title}
-              </div>
+              <div className="text-[13px] font-medium">{s.title}</div>
               <p className="mt-0.5 text-[12px] leading-relaxed text-muted">{s.hint}</p>
             </div>
             {s.action && (
-              <button className="rx-press shrink-0 rounded-md px-2 py-1 text-[11.5px] text-accent hover:bg-hover" onClick={s.action.run}>
+              <button type="button" className="btn btn-ghost btn-sm shrink-0" onClick={s.action.run}>
                 {s.action.label}
               </button>
             )}
           </li>
         ))}
       </ol>
-    </section>
+    </Section>
   );
 }
 
@@ -323,13 +296,13 @@ const STATUS_TONE: Record<ActivityItem["status"], { color: string; label: string
   cancelled: { color: "var(--fg-faint)", label: "Cancelled" },
 };
 
-/** Short follow-ups ("retry", "ok", "continue") say nothing on their own — show the conversation's title instead. */
 /** The Chief of Staff's swarm-planning run (lib/swarms.ts) — the swarm row already represents it. */
 const SWARM_PLANNER = /^Plan an agent swarm for this goal\./;
+/** Short follow-ups ("retry", "ok", "continue") say nothing on their own — show the task's title instead. */
 const TRIVIAL = /^(retry|try again|again|continue|go|go on|ok|okay|yes|y|no|n|next|more|done|thanks|thank you|fix|redo)[.!?\s]*$/i;
 
-function ActivityTimeline({ swarms }: { swarms: Swarm[] }) {
-  const { runs, jobs, threads } = useMissionData();
+function ActivityTimeline({ swarms, loading, error }: { swarms: Swarm[]; loading: boolean; error: string | null }) {
+  const { runs, jobs, threads, refresh } = useMissionData();
   const project = useActiveProject();
   const { getDepartment } = useDepartments();
   const agents = useAgents();
@@ -345,7 +318,7 @@ function ActivityTimeline({ swarms }: { swarms: Swarm[] }) {
         useWorkbench.getState().openConversation({ department: r.department, threadId: r.thread_id });
       } else openPage({ kind: "run", id: r.id }, `Run · ${getDepartment(r.department).name}`);
     };
-    // One row per conversation (its latest run), so retries and follow-ups don't flood the list.
+    // One row per task (its latest run), so retries and follow-ups don't flood the list.
     const seen = new Set<string>();
     for (const r of runs) {
       if (!r.thread_id && SWARM_PLANNER.test(r.brief)) continue; // shown as its swarm
@@ -411,21 +384,24 @@ function ActivityTimeline({ swarms }: { swarms: Swarm[] }) {
 
   return (
     <Section title="Activity" count={liveCount} action={<SectionAction icon={Network} onClick={() => openSwarmList()}>Swarms</SectionAction>}>
-      {!items.length ? (
-        <p className="rounded-[var(--rx-r-md)] border border-dashed border-line px-4 py-3 text-[12.5px] text-muted">Quiet for now. Plan a goal or delegate a task to get work moving.</p>
+      {loading && !items.length ? (
+        <LoadingRows rows={4} height={24} />
+      ) : error && !items.length ? (
+        <ErrorState compact title="Couldn’t load swarms" error={`${error}. Check that REX is running, then retry.`} onRetry={() => reloadAll(refresh)} />
+      ) : !items.length ? (
+        <EmptyState compact icon={Workflow} title="Quiet for now" hint="Plan a goal or delegate a task to get work moving." />
       ) : (
-        <ol className="relative">
-          <span className="absolute bottom-4 left-[21px] top-4 w-px bg-line" aria-hidden />
-          {shown.map((it, i) => (
-            <li key={it.key} className="rx-in relative" style={{ ["--i" as string]: Math.min(i, 8) }}>
+        <ol className="-mx-4">
+          {shown.map((it) => (
+            <li key={it.key}>
               <TimelineRow item={it} />
             </li>
           ))}
         </ol>
       )}
       {items.length > shown.length || all ? (
-        <button className="rx-press mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] text-muted hover:bg-hover hover:text-fg" onClick={() => setAll((v) => !v)} aria-expanded={all}>
-          <ChevronDown size={12} className={`transition-transform ${all ? "rotate-180" : ""}`} /> {all ? "Show less" : `Show all ${items.length}`}
+        <button type="button" className="btn btn-ghost btn-sm -ml-2 mt-1" onClick={() => setAll((v) => !v)} aria-expanded={all}>
+          <ChevronDown size={12} className={all ? "rotate-180" : ""} /> {all ? "Show less" : `Show all ${items.length}`}
         </button>
       ) : null}
     </Section>
@@ -436,36 +412,41 @@ function TimelineRow({ item }: { item: ActivityItem }) {
   const tone = STATUS_TONE[item.status];
   const live = item.status === "running";
   const Icon = item.icon;
+  const bar = (item.swarm && (item.status === "running" || item.status === "planned")) || item.progress !== undefined;
   return (
-    <button className="rx-press group flex w-full items-start gap-3 rounded-[var(--rx-r-sm)] px-2 py-2 text-left hover:bg-hover" onClick={item.open} title={item.title}>
-      <span className="relative z-10 mt-px rounded-[30%] bg-panel">
+    <button type="button" className="flex min-h-8 w-full items-center gap-2.5 px-4 py-1 text-left hover:bg-hover focus-visible:outline-offset-[-1px]" onClick={item.open} title={item.title}>
+      <span className="relative shrink-0">
         {item.dept ? (
-          <DeptAvatar dept={item.dept} size={28} />
+          <DeptAvatar dept={item.dept} size={20} />
         ) : (
-          <span className="grid h-7 w-7 place-items-center rounded-[30%] bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_28%,transparent)]">{Icon && <Icon size={14} />}</span>
+          <span className="grid h-5 w-5 place-items-center rounded-[6px] bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-accent">{Icon && <Icon size={12} />}</span>
         )}
-        <span className="absolute -bottom-0.5 -right-0.5 rounded-full p-[2px] ring-0" style={{ background: "var(--bg-panel)" }}>
-          <StatusDot color={tone.color} live={live} className="!h-[7px] !w-[7px]" />
+        <span className="absolute -bottom-[3px] -right-[3px] rounded-full p-[1.5px]" style={{ background: "var(--bg-panel)" }}>
+          <StatusDot color={tone.color} live={live} className="!h-[6px] !w-[6px]" />
         </span>
       </span>
       <span className="min-w-0 flex-1">
-        <span className={`block truncate text-[12.5px] leading-snug ${live ? "font-medium text-fg" : "text-fg"}`}>{item.title}</span>
-        <span className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-faint">
-          <span className="truncate">{item.sub}</span>
-          {item.status !== "done" && item.status !== "running" && (
-            <span className="shrink-0 font-medium" style={{ color: tone.color }}>
-              {tone.label}
-            </span>
-          )}
+        <span className="flex min-w-0 items-baseline gap-2">
+          <span className={`min-w-0 truncate text-[13px] ${live ? "font-medium" : ""}`}>{item.title}</span>
+          <span className="hidden shrink-0 truncate text-[11px] text-faint @xl:inline">{item.sub}</span>
         </span>
-        {item.swarm && (item.status === "running" || item.status === "planned") && <StepBar swarm={item.swarm} className="mt-1.5" />}
-        {item.progress !== undefined && (
-          <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.progress)}>
-            <span className="block h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${Math.min(100, item.progress)}%` }} />
+        {bar && (
+          <span className="mt-1 block">
+            {item.swarm && (item.status === "running" || item.status === "planned") && <StepBar swarm={item.swarm} />}
+            {item.progress !== undefined && (
+              <span className="block h-1 overflow-hidden rounded-[1px] bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(item.progress)} aria-label="Progress">
+                <span className="block h-full bg-accent transition-[width] duration-500" style={{ width: `${Math.min(100, item.progress)}%` }} />
+              </span>
+            )}
           </span>
         )}
       </span>
-      <span className={`mt-0.5 flex shrink-0 items-center gap-1 text-[11px] tabular-nums ${live ? "text-accent" : "text-faint"}`}>
+      {item.status !== "done" && item.status !== "running" && (
+        <span className="shrink-0 text-[11px] font-medium" style={{ color: tone.color }}>
+          {tone.label}
+        </span>
+      )}
+      <span className={`flex w-14 shrink-0 items-center justify-end gap-1 text-[11px] tabular-nums ${live ? "text-accent" : "text-faint"}`}>
         {live && <Loader2 size={11} className="animate-spin" />}
         {item.time}
       </span>
@@ -475,7 +456,7 @@ function TimelineRow({ item }: { item: ActivityItem }) {
 
 // ---------------------------------------------------------------- lanes
 
-function Lanes({ projectId, projectName }: { projectId: string; projectName: string }) {
+function Lanes({ projectId, projectName, loading }: { projectId: string; projectName: string; loading: boolean }) {
   const { tasks } = useMissionData();
   const byStatus = useMemo(() => {
     const m = Object.fromEntries(TASK_STATUSES.map((s) => [s, [] as Task[]])) as Record<TaskStatus, Task[]>;
@@ -487,60 +468,31 @@ function Lanes({ projectId, projectName }: { projectId: string; projectName: str
   const shown = lane ?? firstActive;
   const total = tasks.length;
   const openBoard = () => openPage({ kind: "board", projectId }, `${projectName} · Board`);
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const onKey = (e: React.KeyboardEvent) => {
-    const i = TASK_STATUSES.indexOf(shown);
-    const n = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : -2;
-    if (n < -1) return;
-    const next = TASK_STATUSES[(n + TASK_STATUSES.length) % TASK_STATUSES.length];
-    e.preventDefault();
-    setLane(next);
-    tabRefs.current[next]?.focus();
-  };
 
   return (
     <Section title="Work" count={total - byStatus.done.length} action={<SectionAction icon={SquareKanban} onClick={openBoard}>Board</SectionAction>}>
-      {!total ? (
-        <p className="rounded-[var(--rx-r-md)] border border-dashed border-line px-4 py-3 text-[12.5px] text-muted">No tasks yet. Generate a plan above and they land here.</p>
+      {loading && !total ? (
+        <LoadingRows rows={3} height={24} />
+      ) : !total ? (
+        <EmptyState compact icon={SquareKanban} title="No tasks yet" hint="Generate a plan above and its tasks land here." />
       ) : (
         <>
-          <div className="grid grid-cols-5 gap-1 rounded-[var(--rx-r-md)] border border-line bg-editor p-1" role="tablist" aria-label="Work lanes" onKeyDown={onKey}>
-            {TASK_STATUSES.map((s) => {
-              const on = shown === s;
-              const n = byStatus[s].length;
-              return (
-                <button
-                  key={s}
-                  ref={(el) => {
-                    tabRefs.current[s] = el;
-                  }}
-                  role="tab"
-                  aria-selected={on}
-                  tabIndex={on ? 0 : -1}
-                  className={`rx-press flex min-w-0 flex-col items-start gap-1 rounded-[7px] px-2 py-1.5 text-left transition-colors ${on ? "bg-elev shadow-[var(--rx-hairline),var(--rx-shadow-1)]" : "hover:bg-hover"}`}
-                  onClick={() => setLane(s)}
-                >
-                  <span className="flex w-full items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: LANE_COLOR[s] }} aria-hidden />
-                    <span className={`truncate text-[11px] ${on ? "font-medium text-fg" : "text-muted"}`}>{STATUS_LABEL[s]}</span>
-                  </span>
-                  <span className={`text-[15px] font-semibold leading-none tabular-nums ${n ? "text-fg" : "text-faint"}`}>{n}</span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="mt-2 flex h-1 gap-[2px] overflow-hidden rounded-full" aria-hidden>
-            {TASK_STATUSES.map((s) => (byStatus[s].length ? <span key={s} className="h-full transition-[flex-grow] duration-500" style={{ flexGrow: byStatus[s].length, background: LANE_COLOR[s] }} /> : null))}
-          </div>
-          <ul key={shown} className="mt-3 space-y-1.5" role="tabpanel" aria-label={STATUS_LABEL[shown]}>
-            {byStatus[shown].slice(0, 6).map((t, i) => (
-              <TaskCard key={t.id} task={t} index={i} />
+          <Tabs
+            label="Work lanes"
+            idPrefix={`lane-${projectId}`}
+            value={shown}
+            onChange={setLane}
+            tabs={TASK_STATUSES.map((s) => ({ value: s, label: STATUS_LABEL[s], badge: byStatus[s].length ? <span className="count">{byStatus[s].length}</span> : undefined }))}
+          />
+          <ul className="-mx-4 mt-1" role="tabpanel" aria-labelledby={`lane-${projectId}-${shown}`}>
+            {byStatus[shown].slice(0, LANE_CAP).map((t) => (
+              <TaskRow key={t.id} task={t} />
             ))}
-            {!byStatus[shown].length && <li className="px-1 py-2 text-[12.5px] text-muted">Nothing in {STATUS_LABEL[shown].toLowerCase()}.</li>}
+            {!byStatus[shown].length && <li className="px-4 py-2 text-[12px] text-muted">Nothing in {STATUS_LABEL[shown].toLowerCase()}.</li>}
           </ul>
-          {byStatus[shown].length > 6 && (
-            <button className="rx-press mt-1.5 flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] text-accent hover:bg-hover" onClick={openBoard}>
-              {byStatus[shown].length - 6} more on the board <ArrowRight size={12} />
+          {byStatus[shown].length > LANE_CAP && (
+            <button type="button" className="btn btn-ghost btn-sm -ml-2 mt-1" onClick={openBoard}>
+              {byStatus[shown].length - LANE_CAP} more on the board <ArrowRight size={12} />
             </button>
           )}
         </>
@@ -549,7 +501,7 @@ function Lanes({ projectId, projectName }: { projectId: string; projectName: str
   );
 }
 
-function TaskCard({ task, index }: { task: Task; index: number }) {
+function TaskRow({ task }: { task: Task }) {
   const { getDepartment } = useDepartments();
   const d = getDepartment(task.department);
   const [swarming, setSwarming] = useState(false);
@@ -565,29 +517,26 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
     focusConversation();
     useWorkbench.getState().delegate({ department: task.department, brief: task.detail ? `${task.title}\n\n${task.detail}` : task.title, taskId: task.id });
   };
-  const act = "rx-press flex h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11.5px] text-muted hover:border-[color-mix(in_srgb,var(--accent)_50%,var(--border))] hover:text-fg";
   return (
-    <li className="rx-card rx-hover rx-in group flex items-center gap-3 px-3 py-2.5" style={{ ["--i" as string]: index }}>
-      <DeptAvatar dept={d} size={26} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[12.5px] leading-snug" title={task.title}>
-          {task.title}
-        </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-faint">
-          <span className="truncate">{d.name}</span>
-          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: PRIORITY_COLOR[task.priority] }} aria-hidden />
-          <span className="capitalize">{task.priority}</span>
-        </div>
-      </div>
+    <li className="group relative flex h-8 items-center gap-2.5 px-4 hover:bg-hover">
+      <DeptAvatar dept={d} size={20} />
+      <span className="min-w-0 flex-1 truncate text-[13px]" title={task.title}>
+        {task.title}
+      </span>
+      <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-faint" title={`${d.name} · ${task.priority} priority`}>
+        <span className="hidden max-w-[120px] truncate @md:inline">{d.name}</span>
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: PRIORITY_COLOR[task.priority] }} aria-hidden />
+        <span className="capitalize">{task.priority}</span>
+      </span>
       {task.status !== "done" && (
-        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 max-[1199px]:opacity-100">
-          <button className={act} onClick={() => void swarm()} disabled={swarming} title="Run a swarm on this task (several departments in parallel)">
-            {swarming ? <Loader2 size={11} className="animate-spin" /> : <Network size={11} />} Swarm
+        <span className="absolute inset-y-0 right-0 flex items-center gap-1 bg-hover pl-3 pr-4 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+          <button type="button" className="btn btn-sm" onClick={() => void swarm()} disabled={swarming} title="Run a swarm on this task (several departments in parallel)">
+            {swarming ? <Loader2 size={12} className="animate-spin" /> : <Network size={12} />} Swarm
           </button>
-          <button className={act} onClick={delegate} title={`Delegate to ${d.name}`}>
-            <Send size={11} /> Delegate
+          <button type="button" className="btn btn-sm" onClick={delegate} title={`Delegate to ${d.name}`}>
+            <Send size={12} /> Delegate
           </button>
-        </div>
+        </span>
       )}
     </li>
   );

@@ -10,6 +10,7 @@ import { pickFolder } from "@/components/ui/FolderPicker";
 import { EmptyState } from "@/components/ui/empty";
 import { GitPanels } from "@/components/ops/GitSection";
 import { Card, CopyButton, ErrorBox, LoadingGrid, Pill, Spinner, errMsg } from "@/components/ops/shared";
+import { Segmented } from "@/components/ui/kit";
 
 type GitAction =
   | { action: "init" }
@@ -94,12 +95,10 @@ export default function RepositorySection({ project, git, connectKey, onLinkFold
       ) : !git.loaded ? (
         <LoadingGrid n={2} h="h-24" />
       ) : git.error && !g ? (
-        <ErrorBox title="Couldn't read the repository" action={<button className="btn h-7" onClick={() => void git.reload()}>Retry</button>}>
-          {git.error}
-        </ErrorBox>
+        <ErrorBox title="Couldn't read the repository" error={git.error} onRetry={() => void git.reload()} />
       ) : !g ? (
-        <Card title="Not a git repository yet" icon={<GitBranch size={14} />}>
-          <p className="text-[12px] text-muted">
+        <Card title="Not a git repository yet" icon={<GitBranch size={13} />} action={<Pill tone="warn">No git</Pill>}>
+          <p className="break-words text-[12px] text-muted">
             <span className="font-mono text-fg">{project.repo_path}</span> isn&apos;t under git. Initialize it here, or clone an existing repository.
           </p>
         </Card>
@@ -110,16 +109,18 @@ export default function RepositorySection({ project, git, connectKey, onLinkFold
       <ConnectCard project={project} g={g} gitLoaded={git.loaded || !hasRepo} busy={busy} run={run} focusKey={connectKey} />
 
       {out && (
-        <section aria-label="Command output" className={`rounded-xl border p-3 ${out.ok ? "border-line bg-elev/30" : "border-err/40 bg-err/10"}`}>
-          <header className="mb-1.5 flex items-center gap-2">
-            <SquareTerminal size={13} className={out.ok ? "text-muted" : "text-err"} />
-            <h3 className={`min-w-0 flex-1 truncate text-[12.5px] font-semibold ${out.ok ? "" : "text-err"}`}>{out.title}</h3>
-            <CopyButton text={out.text} />
-            <button className="btn h-7" onClick={() => setOut(null)}>
+        <section aria-label="Command output" className={`card ${out.ok ? "" : "!border-[color-mix(in_srgb,var(--err)_40%,var(--border))]"}`}>
+          <header className="card-head">
+            <SquareTerminal size={13} className={`shrink-0 ${out.ok ? "text-muted" : "text-err"}`} aria-hidden />
+            <h3 className={`min-w-0 flex-1 truncate ${out.ok ? "" : "text-err"}`} title={out.title}>
+              {out.title}
+            </h3>
+            <CopyButton text={out.text} label="Copy output" iconOnly />
+            <button className="btn btn-sm font-normal" onClick={() => setOut(null)}>
               Clear
             </button>
           </header>
-          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-editor p-2.5 font-mono text-[11.5px] leading-relaxed">{out.text}</pre>
+          <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all bg-editor p-3 font-mono text-[11.5px] leading-relaxed">{out.text}</pre>
         </section>
       )}
 
@@ -149,7 +150,7 @@ function StatusCard({
   return (
     <Card
       title="Repository"
-      icon={<GitBranch size={14} />}
+      icon={<GitBranch size={13} />}
       action={
         <button className="icon-btn" onClick={onRefresh} disabled={refreshing} aria-label="Refresh git status" title="Refresh git status">
           {refreshing ? <Spinner /> : <RefreshCw size={13} />}
@@ -159,37 +160,37 @@ function StatusCard({
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px]">
         <span className="font-mono font-medium">{g.branch ?? "detached HEAD"}</span>
         {noRemote ? (
-          <Pill tone="warn">no remote</Pill>
+          <Pill tone="warn">No remote</Pill>
         ) : (
           <>
-            {g.ahead > 0 && <Pill tone="accent">↑{g.ahead} ahead</Pill>}
-            {g.behind > 0 && <Pill tone="warn">↓{g.behind} behind</Pill>}
-            {!g.ahead && !g.behind && g.commits.length > 0 && <Pill tone="ok">in sync with upstream</Pill>}
+            {g.ahead > 0 && <Pill tone="accent">{g.ahead} ahead</Pill>}
+            {g.behind > 0 && <Pill tone="warn">{g.behind} behind</Pill>}
+            {!g.ahead && !g.behind && g.commits.length > 0 && <Pill tone="ok">In sync</Pill>}
           </>
         )}
-        <span className="text-faint">· {g.commits.length ? `${g.commits.length}${g.commits.length >= 15 ? "+" : ""} recent commits` : "no commits yet"}</span>
+        <span className="text-faint">{g.commits.length ? `${g.commits.length}${g.commits.length >= 15 ? "+" : ""} recent commits` : "no commits yet"}</span>
       </div>
 
       <h4 className="section-title mb-1.5">Remotes</h4>
       {noRemote ? (
         <p className="mb-3 text-[12px] text-muted">No remote yet: connect one below so agents can push and open pull requests.</p>
       ) : (
-        <ul className="mb-3 divide-y divide-line/60 rounded-lg border border-line" aria-label="Remotes">
+        <ul className="mb-3 divide-y divide-line rounded-[4px] border border-line" aria-label="Remotes">
           {g.remotes.map((r) => (
-            <li key={r.name} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-2.5 py-1.5 text-[12px]">
+            <li key={r.name} className="flex min-h-8 min-w-0 items-center gap-2 px-2.5 py-1 text-[12px]">
               <span className="w-16 shrink-0 font-medium">{r.name}</span>
               <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-muted" title={r.url}>
                 {r.url}
               </span>
               {r.webUrl && (
-                <a href={r.webUrl} target="_blank" rel="noreferrer" className="btn h-6 px-2" title={r.webUrl}>
+                <a href={r.webUrl} target="_blank" rel="noreferrer" className="btn btn-sm" title={r.webUrl}>
                   <ExternalLink size={11} /> Open
                 </a>
               )}
               <button className="icon-btn" disabled={!!busy} onClick={() => onChange(r.name, r.url)} aria-label={`Change ${r.name} URL`} title="Change URL">
                 <Pencil size={12} />
               </button>
-              <button className="icon-btn hover:!text-err" disabled={!!busy} onClick={() => onRemove(r.name)} aria-label={`Remove remote ${r.name}`} title="Remove">
+              <button className="icon-btn hover:!text-err" disabled={!!busy} onClick={() => onRemove(r.name)} aria-label={`Remove remote ${r.name}`} title="Remove remote">
                 <Trash2 size={12} />
               </button>
             </li>
@@ -198,16 +199,16 @@ function StatusCard({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn h-7" disabled={!!busy || noRemote} onClick={() => onSync("fetch")}>
+        <button className="btn btn-sm" disabled={!!busy || noRemote} onClick={() => onSync("fetch")}>
           {busy === "Fetched" ? <Spinner /> : <CloudDownload size={12} />} Fetch
         </button>
-        <button className="btn h-7" disabled={!!busy || noRemote} onClick={() => onSync("pull")}>
+        <button className="btn btn-sm" disabled={!!busy || noRemote} onClick={() => onSync("pull")}>
           {busy === "Pulled" ? <Spinner /> : <ArrowDownToLine size={12} />} Pull
         </button>
-        <button className="btn h-7" disabled={!!busy || noRemote} onClick={() => onSync("push")}>
+        <button className="btn btn-sm" disabled={!!busy || noRemote} onClick={() => onSync("push")}>
           {busy === "Pushed" ? <Spinner /> : <ArrowUpFromLine size={12} />} Push
         </button>
-        {noRemote && <span className="text-[11.5px] text-faint">Connect a remote to sync.</span>}
+        {noRemote && <span className="text-[12px] text-faint">Connect a remote to sync.</span>}
       </div>
     </Card>
   );
@@ -215,9 +216,9 @@ function StatusCard({
 
 const MODES: { id: Mode; label: string; icon: typeof Link2 }[] = [
   { id: "remote", label: "Remote URL", icon: Link2 },
-  { id: "github", label: "Create on GitHub", icon: GitPullRequestCreate },
-  { id: "clone", label: "Clone from URL", icon: CloudDownload },
-  { id: "init", label: "Init git here", icon: FolderGit2 },
+  { id: "github", label: "New on GitHub", icon: GitPullRequestCreate },
+  { id: "clone", label: "Clone", icon: CloudDownload },
+  { id: "init", label: "Init git", icon: FolderGit2 },
 ];
 
 function ConnectCard({
@@ -256,36 +257,21 @@ function ConnectCard({
     });
   }, [focusKey, gitLoaded]);
 
-  const emphasized = !g?.remotes.length;
-
   return (
-    <section ref={ref} id="hub-connect-repo" aria-labelledby="hub-connect-title" className={`scroll-mt-4 min-w-0 rounded-xl border p-3.5 ${emphasized ? "border-accent/50 bg-accent/5" : "border-line bg-elev/30"}`}>
-      <header className="mb-1 flex items-center gap-2">
-        <Plug size={14} className="text-accent" />
-        <h3 id="hub-connect-title" className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+    <section ref={ref} id="hub-connect-repo" aria-labelledby="hub-connect-title" className="card scroll-mt-4 min-w-0">
+      <header className="card-head">
+        <Plug size={13} className="shrink-0 text-muted" aria-hidden />
+        <h3 id="hub-connect-title" className="min-w-0 flex-1 truncate">
           {hasOrigin ? "Connect another repository" : "Connect repository"}
         </h3>
       </header>
+      <div className="card-body">
       <p className="mb-3 text-[12px] text-muted">
         {!hasRepo ? "This project has no folder yet: clone a repository into a new folder and it becomes the project's repository." : !isGit ? "Turn the project folder into a git repository, or clone one instead." : "Link a remote so agents can push branches, open pull requests and read CI."}
       </p>
 
-      <div role="radiogroup" aria-label="How to connect" className="mb-3 flex flex-wrap gap-1.5">
-        {MODES.filter((m) => available.includes(m.id)).map((m) => {
-          const on = m.id === mode;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => setMode(m.id)}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] ${on ? "border-accent bg-accent/15 text-fg" : "border-line text-muted hover:text-fg"}`}
-            >
-              <m.icon size={12} /> {m.label}
-            </button>
-          );
-        })}
+      <div className="mb-4 max-w-full overflow-x-auto [scrollbar-width:none]">
+        <Segmented value={mode} onChange={setMode} label="How to connect" options={MODES.filter((m) => available.includes(m.id)).map((m) => ({ value: m.id, label: m.label, icon: m.icon }))} />
       </div>
 
       {mode === "remote" && <RemoteForm key={String(hasOrigin)} busy={busy} run={run} hasOrigin={hasOrigin} />}
@@ -293,14 +279,15 @@ function ConnectCard({
       {mode === "clone" && <CloneForm project={project} busy={busy} run={run} />}
       {mode === "init" && (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="min-w-0 flex-1 text-[12px] text-muted">
+          <p className="min-w-0 flex-1 break-words text-[12px] text-muted">
             Runs <code className="font-mono">git init -b main</code> in <span className="font-mono text-fg">{project.repo_path}</span>.
           </p>
-          <button data-autofocus className="btn btn-primary h-7" disabled={!!busy} onClick={() => void run("Initialized git", { action: "init" })}>
+          <button data-autofocus className="btn btn-primary" disabled={!!busy} onClick={() => void run("Initialized git", { action: "init" })}>
             {busy === "Initialized git" ? <Spinner /> : <FolderGit2 size={12} />} Init git here
           </button>
         </div>
       )}
+      </div>
     </section>
   );
 }
@@ -327,10 +314,10 @@ function RemoteForm({ busy, run, hasOrigin }: { busy: string | null; run: (label
         <span className="label">Remote name</span>
         <input className="input font-mono" value={name} onChange={(e) => setName(e.target.value)} placeholder="origin" />
       </label>
-      <button type="submit" className="btn btn-primary h-7 justify-self-start" disabled={!!busy || !valid}>
+      <button type="submit" className="btn btn-primary justify-self-start" disabled={!!busy || !valid}>
         {busy === label ? <Spinner /> : <Link2 size={12} />} {hasOrigin && name.trim() === "origin" ? "Change origin" : "Connect"}
       </button>
-      {!!url.trim() && !valid && <p className="text-[11.5px] text-warn @2xl:col-span-3">Use an https://, git@ or ssh:// repository URL.</p>}
+      {!!url.trim() && !valid && <p className="help !text-warn @2xl:col-span-3">Use an https://, git@ or ssh:// repository URL.</p>}
     </form>
   );
 }
@@ -356,7 +343,7 @@ function GithubForm({ project, busy, run, hasOrigin, hasCommits }: { project: Pr
         if (ok) await run(label, { action: "create-github", name: n, visibility, description: description.trim() || undefined });
       }}
     >
-      {hasOrigin && <p className="text-[11.5px] text-warn">This repo already has an origin remote. Remove it first: gh adds the new repository as origin.</p>}
+      {hasOrigin && <p className="help !mt-0 !text-warn">This repository already has an origin remote. Remove it first: gh adds the new repository as origin.</p>}
       <div className="grid grid-cols-1 gap-2 @2xl:grid-cols-[minmax(0,1fr)_160px]">
         <label className="block min-w-0">
           <span className="label">Repository name</span>
@@ -371,14 +358,14 @@ function GithubForm({ project, busy, run, hasOrigin, hasCommits }: { project: Pr
         </label>
       </div>
       <label className="block">
-        <span className="label">Description (optional)</span>
+        <span className="label">Description</span>
         <input className="input" maxLength={300} value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" className="btn btn-primary h-7" disabled={!!busy || !name.trim() || hasOrigin}>
+        <button type="submit" className="btn btn-primary" disabled={!!busy || !name.trim() || hasOrigin}>
           {busy === label ? <Spinner /> : <GitPullRequestCreate size={12} />} Create on GitHub
         </button>
-        <span className="text-[11.5px] text-faint">Needs the GitHub CLI signed in (gh auth login).</span>
+        <span className="text-[12px] text-faint">Needs the GitHub CLI signed in (gh auth login).</span>
       </div>
     </form>
   );
@@ -410,10 +397,10 @@ function CloneForm({ project, busy, run }: { project: Project; busy: string | nu
         <span className="label">Repository URL</span>
         <input data-autofocus className="input font-mono" required value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://github.com/you/repo.git" aria-invalid={!!url.trim() && !valid} />
       </label>
-      <button type="submit" className="btn btn-primary h-7 justify-self-start" disabled={!!busy || !valid}>
-        {busy === label ? <Spinner /> : <FolderOpen size={12} />} Choose folder & clone…
+      <button type="submit" className="btn btn-primary justify-self-start" disabled={!!busy || !valid}>
+        {busy === label ? <Spinner /> : <FolderOpen size={12} />} Choose folder and clone…
       </button>
-      <p className="text-[11.5px] text-faint @2xl:col-span-2">
+      <p className="help !mt-0 @2xl:col-span-2">
         {!!url.trim() && !valid ? <span className="text-warn">Use an https://, git@ or ssh:// repository URL. </span> : null}
         Clones into a new, empty folder; it becomes this project&apos;s repository folder.
       </p>

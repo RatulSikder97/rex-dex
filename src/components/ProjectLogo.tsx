@@ -18,7 +18,7 @@ export function ProjectAvatar({ project, size = 28, className = "", onClick }: {
   );
   const cls = `inline-flex shrink-0 items-center justify-center overflow-hidden bg-accent/15 ring-1 ring-inset ring-line ${className}`;
   return onClick ? (
-    <button type="button" className={`${cls} transition-transform hover:scale-105`} style={style} onClick={onClick} title="Project logo" aria-label="Project logo">
+    <button type="button" className={`${cls} hover:ring-[color-mix(in_srgb,var(--accent)_50%,var(--border))]`} style={style} onClick={onClick} title="Project logo" aria-label="Project logo">
       {inner}
     </button>
   ) : (
@@ -117,31 +117,33 @@ function LogoStudio({ projectId, onClose }: { projectId: string; onClose: () => 
   const elapsed = busy === "gen" ? Math.max(0, Math.round((now - startedAt) / 1000)) : 0;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()} role="dialog" aria-modal="true" aria-label="Project logo">
-      <div className="w-[min(640px,96vw)] overflow-hidden rounded-xl border border-line bg-elev shadow-[0_24px_64px_rgba(0,0,0,.5)]">
-        <div className="flex items-center gap-3 border-b border-line px-5 py-4">
-          <ProjectAvatar project={project} size={40} />
+    <div className="scrim fixed inset-0 z-[150] flex items-center justify-center p-4" onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="logo-studio-title" className="popover w-[min(600px,96vw)] overflow-hidden">
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <ProjectAvatar project={project} size={32} />
           <div className="min-w-0 flex-1">
-            <h2 className="text-[15px] font-semibold">Logo for {project?.name ?? "project"}</h2>
-            <p className="text-[12px] text-muted">The Design department drafts a few marks; pick one, or upload your own.</p>
+            <h2 id="logo-studio-title" className="truncate text-[13px] font-semibold" title={project?.name}>
+              Logo for {project?.name ?? "project"}
+            </h2>
+            <p className="text-[12.5px] text-muted">The Design department drafts a few marks. Pick one, or upload your own.</p>
           </div>
-          <button className="icon-btn" onClick={onClose} disabled={!!busy} aria-label="Close">
+          <button className="icon-btn" onClick={onClose} disabled={!!busy} aria-label="Close" title="Close (Esc)">
             <X size={15} />
           </button>
         </div>
 
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-4">
           <div className="flex gap-2">
             <input
-              className="input h-9 !rounded-lg"
+              className="input"
               placeholder="Style hint (optional): e.g. minimal geometric, warm orange, rocket"
               value={hint}
               onChange={(e) => setHint(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !busy && void generate()}
               aria-label="Style hint"
             />
-            <button className="btn btn-primary h-9 shrink-0 !rounded-lg" onClick={() => void generate()} disabled={!!busy}>
-              {options.length ? <RefreshCw size={14} className={busy === "gen" ? "animate-spin" : ""} /> : <Sparkles size={14} />}
+            <button className="btn shrink-0" onClick={() => void generate()} disabled={!!busy}>
+              {options.length ? <RefreshCw size={13} className={busy === "gen" ? "animate-spin" : ""} aria-hidden /> : <Sparkles size={13} aria-hidden />}
               {busy === "gen" ? `Designing… ${elapsed}s` : options.length ? "Regenerate" : "Generate logos"}
             </button>
           </div>
@@ -149,13 +151,13 @@ function LogoStudio({ projectId, onClose }: { projectId: string; onClose: () => 
           {busy === "gen" && !options.length && (
             <div className="grid grid-cols-3 gap-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="aspect-square animate-pulse rounded-xl bg-hover" />
+                <div key={i} className="skeleton aspect-square !rounded-[6px]" />
               ))}
             </div>
           )}
 
           {!!options.length && (
-            <div className={`grid grid-cols-3 gap-3 ${busy === "gen" ? "opacity-50" : ""}`} role="radiogroup" aria-label="Logo options">
+            <div aria-busy={busy === "gen"} className={`grid grid-cols-3 gap-3 ${busy === "gen" ? "opacity-70" : ""}`} role="radiogroup" aria-label="Logo options">
               {options.map((svg, i) => (
                 <button
                   key={i}
@@ -163,11 +165,12 @@ function LogoStudio({ projectId, onClose }: { projectId: string; onClose: () => 
                   aria-checked={picked === i}
                   onClick={() => setPicked(i)}
                   onDoubleClick={() => void save(svg)}
-                  className={`group relative aspect-square overflow-hidden rounded-xl border-2 bg-bg p-3 transition-all hover:-translate-y-0.5 ${picked === i ? "border-accent shadow-[0_0_0_4px_color-mix(in_srgb,var(--accent)_20%,transparent)]" : "border-line hover:border-faint"}`}
+                  title="Double-click to use this logo"
+                  className={`group relative aspect-square overflow-hidden rounded-[6px] border bg-bg p-3 transition-colors ${picked === i ? "border-accent shadow-[0_0_0_1px_var(--accent)]" : "border-line hover:border-[color-mix(in_srgb,var(--fg-faint)_60%,var(--border))]"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- data URL of sanitized SVG */}
-                  <img src={svgDataUrl(svg)} alt={`Logo option ${i + 1}`} className="h-full w-full rounded-lg object-contain" />
-                  <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-elev/90 px-1.5 py-0.5">
+                  <img src={svgDataUrl(svg)} alt={`Logo option ${i + 1}`} className="h-full w-full rounded-[4px] object-contain" />
+                  <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-[4px] border border-line bg-elev px-1 py-0.5">
                     {/* eslint-disable-next-line @next/next/no-img-element -- favicon-size preview */}
                     <img src={svgDataUrl(svg)} alt="" className="h-4 w-4 rounded-[3px]" />
                     {picked === i && <Check size={11} className="text-accent" />}
@@ -178,29 +181,33 @@ function LogoStudio({ projectId, onClose }: { projectId: string; onClose: () => 
           )}
 
           {!options.length && busy !== "gen" && (
-            <div className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-[12.5px] text-muted">
+            <div className="rounded-[6px] border border-dashed border-line px-4 py-6 text-center text-[12.5px] text-muted">
               Generate three concepts from your project&apos;s name and description, or upload an SVG / PNG.
             </div>
           )}
-          {error && <div className="rounded-lg border border-err/40 bg-err/10 px-3 py-2 text-[12px] text-err">{error}</div>}
+          {error && (
+            <div role="alert" className="rounded-[4px] border border-[color-mix(in_srgb,var(--err)_40%,var(--border))] bg-[color-mix(in_srgb,var(--err)_10%,transparent)] px-3 py-2 text-[12px] text-err">
+              {error}
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 border-t border-line px-5 py-3">
+        <div className="flex items-center gap-2 border-t border-line px-4 py-3">
           <input ref={file} type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden onChange={(e) => void upload(e.target.files?.[0])} />
-          <button className="btn h-8 !rounded-lg" onClick={() => file.current?.click()} disabled={!!busy}>
-            <ImageUp size={14} /> Upload
+          <button className="btn btn-ghost" onClick={() => file.current?.click()} disabled={!!busy}>
+            <ImageUp size={13} aria-hidden /> Upload…
           </button>
           {project?.logo && (
-            <button className="btn h-8 !rounded-lg" onClick={() => void save("")} disabled={!!busy}>
-              <Trash2 size={13} /> Remove
+            <button className="btn btn-ghost" onClick={() => void save("")} disabled={!!busy}>
+              <Trash2 size={13} aria-hidden /> Remove logo
             </button>
           )}
           <div className="flex-1" />
-          <button className="btn h-8 !rounded-lg" onClick={onClose} disabled={!!busy}>
+          <button className="btn" onClick={onClose} disabled={!!busy}>
             Cancel
           </button>
-          <button className="btn btn-primary h-8 !rounded-lg" disabled={picked === null || !options[picked ?? -1] || !!busy} onClick={() => picked !== null && void save(options[picked])}>
-            <Check size={14} /> Use this logo
+          <button className="btn btn-primary" disabled={picked === null || !options[picked ?? -1] || !!busy} onClick={() => picked !== null && void save(options[picked])}>
+            <Check size={13} aria-hidden /> Use this logo
           </button>
         </div>
       </div>

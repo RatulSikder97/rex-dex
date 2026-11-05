@@ -127,7 +127,7 @@ function useMenus(): TopMenu[] {
     type: "submenu",
     label: "Theme",
     items: [
-      { label: "Color Theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
+      { label: "Color theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
       { type: "separator" },
       ...(["dark", "light", "system"] as const).map<MenuItem>((t) => ({
         label: t === "system" ? "System" : t === "dark" ? "Dark" : "Light",
@@ -143,15 +143,15 @@ function useMenus(): TopMenu[] {
   const prefsItems: MenuItem[] = [
     { label: mac ? "Settings…" : "Settings", hint: shortcut("settings"), onSelect: () => s.openSettings() },
     { label: "Settings (JSON)", onSelect: openSettingsJson },
-    { label: "Color Theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
-    { label: "Keyboard Shortcuts", onSelect: openShortcuts },
+    { label: "Color theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
+    { label: "Keyboard shortcuts", onSelect: openShortcuts },
     { label: "Extensions", hint: shortcut("extensions"), onSelect: openExtensions },
     { label: "Connections", onSelect: openConnections },
     { type: "separator" },
     themeMenu,
     { type: "separator" },
-    { label: "Manage Agents", onSelect: () => s.openSettings("settings-agents") },
-    { label: "Check Agents…", onSelect: () => void recheckAgents() },
+    { label: "Manage agents", onSelect: () => s.openSettings("settings-agents") },
+    { label: "Check agents…", onSelect: () => void recheckAgents() },
   ];
 
   const appMenu: TopMenu = {
@@ -163,15 +163,15 @@ function useMenus(): TopMenu[] {
       { type: "separator" },
       { label: "Settings…", hint: shortcut("settings"), onSelect: () => s.openSettings() },
       { label: "Settings (JSON)", onSelect: openSettingsJson },
-      { label: "Color Theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
+      { label: "Color theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
       themeMenu,
       { type: "separator" },
       { label: "Extensions", hint: shortcut("extensions"), onSelect: openExtensions },
       { label: "Connections", onSelect: openConnections },
-      { label: "Keyboard Shortcuts", onSelect: openShortcuts },
+      { label: "Keyboard shortcuts", onSelect: openShortcuts },
       { type: "separator" },
-      { label: "Manage Agents", onSelect: () => s.openSettings("settings-agents") },
-      { label: "Check Agents…", onSelect: () => void recheckAgents() },
+      { label: "Manage agents", onSelect: () => s.openSettings("settings-agents") },
+      { label: "Check agents…", onSelect: () => void recheckAgents() },
     ],
   };
 
@@ -180,32 +180,32 @@ function useMenus(): TopMenu[] {
     label: "File",
     mnemonic: "f",
     items: [
-      { label: "New Task", onSelect: newTask },
-      { label: "New Project…", hint: shortcut("newProject"), onSelect: () => void newProjectFlow() },
-      { label: "New File…", disabled: !project?.repo_path, onSelect: () => void newFileFlow() },
+      { label: "New task", onSelect: newTask },
+      { label: "New project…", hint: shortcut("newProject"), onSelect: () => void newProjectFlow() },
+      { label: "New file…", disabled: !project?.repo_path, onSelect: () => void newFileFlow() },
       { type: "separator" },
-      { label: "Open Folder as Project…", onSelect: () => void openFolderFlow() },
+      { label: "Open folder as project…", onSelect: () => void openFolderFlow() },
       {
         type: "submenu",
-        label: "Open Recent",
+        label: "Open recent",
         disabled: !s.projects.length,
         items: s.projects.slice(0, 12).map<MenuItem>((p) => ({ label: p.name, checked: p.id === s.projectId, onSelect: () => switchProject(p.id) })),
       },
-      { label: "Clone Repository…", onSelect: () => void cloneRepositoryFlow() },
+      { label: "Clone repository…", onSelect: () => void cloneRepositoryFlow() },
       { type: "separator" },
-      { label: "Project Hub…", disabled: noProject, onSelect: () => openProjectHub() },
-      { label: "Connect Repository…", disabled: noProject, onSelect: () => connectRepository() },
-      { label: "Add Server…", disabled: noProject, onSelect: () => addProjectServer() },
-      { label: "Generate Logo…", disabled: noProject, onSelect: () => openLogoStudio() },
+      { label: "Project hub…", disabled: noProject, onSelect: () => openProjectHub() },
+      { label: "Connect repository…", disabled: noProject, onSelect: () => connectRepository() },
+      { label: "Add server…", disabled: noProject, onSelect: () => addProjectServer() },
+      { label: "Generate logo…", disabled: noProject, onSelect: () => openLogoStudio() },
       { type: "separator" },
       { label: "Save", hint: shortcut("save"), disabled: !fileTab, onSelect: saveActive },
-      { label: "Save All", hint: shortcut("saveAll"), disabled: !s.tabs.some((t) => t.dirty), onSelect: saveAll },
-      { label: "Auto Save", checked: autoSave !== "off", onSelect: () => set("files.autoSave", autoSave === "off" ? "afterDelay" : "off") },
+      { label: "Save all", hint: shortcut("saveAll"), disabled: !s.tabs.some((t) => t.dirty), onSelect: saveAll },
+      { label: "Auto save", checked: autoSave !== "off", onSelect: () => set("files.autoSave", autoSave === "off" ? "afterDelay" : "off") },
       { type: "separator" },
       { type: "submenu", label: "Preferences", items: prefsItems },
       { type: "separator" },
-      { label: "Close Editor", hint: shortcut("closeTab"), disabled: !tab, onSelect: () => tab && void closeTab(tab.id) },
-      { label: "Close All Editors", disabled: !s.tabs.length, onSelect: () => void closeAll() },
+      { label: "Close editor", hint: shortcut("closeTab"), disabled: !tab, onSelect: () => tab && void closeTab(tab.id) },
+      { label: "Close all editors", disabled: !s.tabs.length, onSelect: () => void closeAll() },
     ],
   };
 
@@ -224,9 +224,9 @@ function useMenus(): TopMenu[] {
       editorItem("Find", "find", "actions.find"),
       editorItem("Replace", "replace", "editor.action.startFindReplaceAction"),
       { type: "separator" },
-      { label: "Find in Files", hint: shortcut("search"), onSelect: () => showActivity("search") },
+      { label: "Find in files", hint: shortcut("search"), onSelect: () => showActivity("search") },
       { type: "separator" },
-      editorItem("Toggle Line Comment", "comment", "editor.action.commentLine"),
+      editorItem("Toggle line comment", "comment", "editor.action.commentLine"),
     ],
   };
 
@@ -235,18 +235,18 @@ function useMenus(): TopMenu[] {
     label: "Selection",
     mnemonic: "s",
     items: [
-      { label: "Select All", hint: ek("selectAll"), onSelect: editorOr("editor.action.selectAll", () => document.execCommand("selectAll")) },
-      editorItem("Expand Selection", "expand", "editor.action.smartSelect.expand"),
-      editorItem("Shrink Selection", "shrink", "editor.action.smartSelect.shrink"),
+      { label: "Select all", hint: ek("selectAll"), onSelect: editorOr("editor.action.selectAll", () => document.execCommand("selectAll")) },
+      editorItem("Expand selection", "expand", "editor.action.smartSelect.expand"),
+      editorItem("Shrink selection", "shrink", "editor.action.smartSelect.shrink"),
       { type: "separator" },
-      editorItem("Copy Line Up", "copyUp", "editor.action.copyLinesUpAction"),
-      editorItem("Copy Line Down", "copyDown", "editor.action.copyLinesDownAction"),
-      editorItem("Move Line Up", "moveUp", "editor.action.moveLinesUpAction"),
-      editorItem("Move Line Down", "moveDown", "editor.action.moveLinesDownAction"),
+      editorItem("Copy line up", "copyUp", "editor.action.copyLinesUpAction"),
+      editorItem("Copy line down", "copyDown", "editor.action.copyLinesDownAction"),
+      editorItem("Move line up", "moveUp", "editor.action.moveLinesUpAction"),
+      editorItem("Move line down", "moveDown", "editor.action.moveLinesDownAction"),
       { type: "separator" },
-      editorItem("Add Cursor Above", "cursorAbove", "editor.action.insertCursorAbove"),
-      editorItem("Add Cursor Below", "cursorBelow", "editor.action.insertCursorBelow"),
-      editorItem("Add Next Occurrence", "nextMatch", "editor.action.addSelectionToNextFindMatch"),
+      editorItem("Add cursor above", "cursorAbove", "editor.action.insertCursorAbove"),
+      editorItem("Add cursor below", "cursorBelow", "editor.action.insertCursorBelow"),
+      editorItem("Add next occurrence", "nextMatch", "editor.action.addSelectionToNextFindMatch"),
     ],
   };
 
@@ -255,10 +255,10 @@ function useMenus(): TopMenu[] {
     label: "View",
     mnemonic: "v",
     items: [
-      { label: "Command Palette…", hint: kbd("⌘⇧P"), onSelect: () => s.setPalette(true, "commands") },
+      { label: "Command palette…", hint: kbd("⌘⇧P"), onSelect: () => s.setPalette(true, "commands") },
       {
         type: "submenu",
-        label: "Open View",
+        label: "Open view",
         items: [...ACTIVITIES.map<MenuItem>((a) => ({ label: a.label, hint: a.shortcut ? shortcut(a.shortcut) : undefined, onSelect: () => activate(a.id) })), { label: "Settings", onSelect: () => activate("settings") }],
       },
       { type: "separator" },
@@ -266,39 +266,39 @@ function useMenus(): TopMenu[] {
         type: "submenu",
         label: "Appearance",
         items: [
-          { label: "Primary Side Bar", checked: s.sidebarOpen, hint: shortcut("sidebar"), onSelect: () => s.toggleSidebar() },
-          { label: "Activity Bar", checked: activityBar, onSelect: () => set("workbench.activityBar.visible", !activityBar) },
-          { label: "Status Bar", checked: statusBar, onSelect: () => set("workbench.statusBar.visible", !statusBar) },
+          { label: "Primary side bar", checked: s.sidebarOpen, hint: shortcut("sidebar"), onSelect: () => s.toggleSidebar() },
+          { label: "Activity bar", checked: activityBar, onSelect: () => set("workbench.activityBar.visible", !activityBar) },
+          { label: "Status bar", checked: statusBar, onSelect: () => set("workbench.statusBar.visible", !statusBar) },
           { label: "Panel", checked: s.panelOpen, hint: shortcut("panel"), onSelect: () => s.togglePanel() },
-          { label: "Agent Panel", checked: s.agentOpen, hint: shortcut("agent"), onSelect: () => s.toggleAgent() },
+          { label: "Agent panel", checked: s.agentOpen, hint: shortcut("agent"), onSelect: () => s.toggleAgent() },
           { type: "separator" },
-          { label: "Maximize Panel", checked: s.panelOpen && s.panelMaximized, onSelect: togglePanelMaximized },
-          { label: sideBarLocation === "right" ? "Move Primary Side Bar Left" : "Move Primary Side Bar Right", onSelect: () => set("workbench.sideBarLocation", sideBarLocation === "right" ? "left" : "right") },
-          { label: "Reset Layout", onSelect: resetLayout },
+          { label: "Maximize panel", checked: s.panelOpen && s.panelMaximized, onSelect: togglePanelMaximized },
+          { label: sideBarLocation === "right" ? "Move primary side bar left" : "Move primary side bar right", onSelect: () => set("workbench.sideBarLocation", sideBarLocation === "right" ? "left" : "right") },
+          { label: "Reset layout", onSelect: resetLayout },
           { type: "separator" },
-          { label: "Zoom In", hint: shortcut("zoomIn"), onSelect: () => zoom(1) },
-          { label: "Zoom Out", hint: shortcut("zoomOut"), onSelect: () => zoom(-1) },
-          { label: "Reset Zoom", hint: shortcut("zoomReset"), onSelect: () => zoom(0) },
+          { label: "Zoom in", hint: shortcut("zoomIn"), onSelect: () => zoom(1) },
+          { label: "Zoom out", hint: shortcut("zoomOut"), onSelect: () => zoom(-1) },
+          { label: "Reset zoom", hint: shortcut("zoomReset"), onSelect: () => zoom(0) },
         ],
       },
-      { label: "Color Theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
+      { label: "Color theme…", hint: shortcut("colorTheme"), onSelect: openThemePicker },
       themeMenu,
-      { label: s.layoutMode === "mission" ? "Switch to Code Mode" : "Switch to Mission Mode", hint: shortcut("layoutMode"), onSelect: toggleLayoutMode },
+      { label: s.layoutMode === "mission" ? "Switch to Code mode" : "Switch to Mission mode", hint: shortcut("layoutMode"), onSelect: toggleLayoutMode },
       { type: "separator" },
-      { label: "Ops Center", onSelect: openOps },
+      { label: "Ops center", onSelect: openOps },
       { label: "Connections", onSelect: openConnections },
       { label: "Swarms", onSelect: openSwarms },
       { type: "separator" },
       { label: "Explorer", hint: shortcut("explorer"), onSelect: () => showActivity("code") },
       { label: "Search", hint: shortcut("search"), onSelect: () => showActivity("search") },
-      { label: "Source Control", hint: shortcut("scm"), onSelect: () => showActivity("scm") },
-      { label: "Agent Runs", hint: shortcut("runs"), onSelect: () => showActivity("runs") },
+      { label: "Source control", hint: shortcut("scm"), onSelect: () => showActivity("scm") },
+      { label: "Agent runs", hint: shortcut("runs"), onSelect: () => showActivity("runs") },
       { label: "Extensions", hint: shortcut("extensions"), onSelect: openExtensions },
       { type: "separator" },
       { label: "Output", onSelect: () => s.setPanelTab("output") },
       { label: "Terminal", hint: shortcut("terminal"), onSelect: () => s.setPanelTab("terminal") },
       { type: "separator" },
-      { label: "Word Wrap", checked: wordWrap !== "off", onSelect: () => set("editor.wordWrap", wordWrap === "off" ? "on" : "off") },
+      { label: "Word wrap", checked: wordWrap !== "off", onSelect: () => set("editor.wordWrap", wordWrap === "off" ? "on" : "off") },
       { label: "Minimap", checked: minimap, onSelect: () => set("editor.minimap", !minimap) },
     ],
   };
@@ -308,24 +308,24 @@ function useMenus(): TopMenu[] {
     label: "Go",
     mnemonic: "g",
     items: [
-      { label: "Go to File…", hint: shortcut("quickOpen"), onSelect: () => s.setPalette(true, "files") },
-      { label: "Go to Tab…", disabled: !s.tabs.length, onSelect: () => openPaletteWith("Go to tab: ") },
-      { label: "Go to Line…", hint: ek("gotoLine"), disabled: !hasEditor, onSelect: editorOr("editor.action.gotoLine") },
+      { label: "Go to file…", hint: shortcut("quickOpen"), onSelect: () => s.setPalette(true, "files") },
+      { label: "Go to tab…", disabled: !s.tabs.length, onSelect: () => openPaletteWith("Go to tab: ") },
+      { label: "Go to line…", hint: ek("gotoLine"), disabled: !hasEditor, onSelect: editorOr("editor.action.gotoLine") },
       { type: "separator" },
-      { label: "Next Tab", hint: shortcut("nextTab"), disabled: s.tabs.length < 2, onSelect: () => cycleTab(1) },
-      { label: "Previous Tab", hint: shortcut("prevTab"), disabled: s.tabs.length < 2, onSelect: () => cycleTab(-1) },
+      { label: "Next tab", hint: shortcut("nextTab"), disabled: s.tabs.length < 2, onSelect: () => cycleTab(1) },
+      { label: "Previous tab", hint: shortcut("prevTab"), disabled: s.tabs.length < 2, onSelect: () => cycleTab(-1) },
       { type: "separator" },
       {
         type: "submenu",
-        label: "Switch Project",
+        label: "Switch project",
         disabled: !s.projects.length,
         items: s.projects.map<MenuItem>((p) => ({ label: p.name, hint: p.stage, checked: p.id === s.projectId, onSelect: () => switchProject(p.id) })),
       },
       { type: "separator" },
-      { label: "Go to Project Hub", disabled: noProject, onSelect: () => openProjectHub() },
+      { label: "Go to project hub", disabled: noProject, onSelect: () => openProjectHub() },
       { label: "Go to Ops", onSelect: openOps },
       { label: "Go to Swarms", onSelect: openSwarms },
-      { label: "Command Center", onSelect: () => s.openTab({ kind: "dashboard" }, "Command Center") },
+      { label: "Command center", onSelect: () => s.openTab({ kind: "dashboard" }, "Command Center") },
     ],
   };
 
@@ -335,14 +335,14 @@ function useMenus(): TopMenu[] {
     label: "Terminal",
     mnemonic: "t",
     items: [
-      { label: "New Terminal", hint: kbd("⌃⇧`"), onSelect: newTerminal },
-      { label: "Toggle Terminal", hint: shortcut("terminal"), onSelect: () => (s.panelOpen && s.panelTab === "terminal" ? s.togglePanel(false) : s.setPanelTab("terminal")) },
+      { label: "New terminal", hint: kbd("⌃⇧`"), onSelect: newTerminal },
+      { label: "Toggle terminal", hint: shortcut("terminal"), onSelect: () => (s.panelOpen && s.panelTab === "terminal" ? s.togglePanel(false) : s.setPanelTab("terminal")) },
       { type: "separator" },
       ...(agentsInteractive.length
-        ? agentsInteractive.map<MenuItem>((a) => ({ label: `Open ${a.label} in Terminal`, onSelect: () => s.launchTerminal({ id: a.id, action: "interactive" }) }))
+        ? agentsInteractive.map<MenuItem>((a) => ({ label: `Open ${a.label} in terminal`, onSelect: () => s.launchTerminal({ id: a.id, action: "interactive" }) }))
         : [{ label: "No terminal agents installed", disabled: true, onSelect: () => {} } as MenuItem]),
       { type: "separator" },
-      { label: "Kill Terminal", onSelect: killTerminal },
+      { label: "Kill terminal", onSelect: killTerminal },
     ],
   };
 
@@ -351,14 +351,14 @@ function useMenus(): TopMenu[] {
     label: "Agents",
     mnemonic: "a",
     items: [
-      { label: "Open Agent Panel", hint: shortcut("agent"), onSelect: () => s.toggleAgent(true) },
-      { label: "New Conversation", onSelect: newConversation },
+      { label: "Open agent panel", hint: shortcut("agent"), onSelect: () => s.toggleAgent(true) },
+      { label: "New agent task", onSelect: newConversation },
       { type: "separator" },
       ...departments.map<MenuItem>((d) => ({ label: `Ask ${d.name}`, onSelect: () => s.delegate({ department: d.id, brief: "" }) })),
       { type: "separator" },
-      { label: "Agent Runs", hint: shortcut("runs"), onSelect: () => showActivity("runs") },
-      { label: "Manage Agents", onSelect: () => s.openSettings("settings-agents") },
-      { label: "Check Agents…", onSelect: () => void recheckAgents() },
+      { label: "Agent runs", hint: shortcut("runs"), onSelect: () => showActivity("runs") },
+      { label: "Manage agents", onSelect: () => s.openSettings("settings-agents") },
+      { label: "Check agents…", onSelect: () => void recheckAgents() },
     ],
   };
 
@@ -368,8 +368,8 @@ function useMenus(): TopMenu[] {
     mnemonic: "h",
     items: [
       { label: "Welcome", onSelect: openWelcome },
-      { label: "Show All Commands", hint: kbd("⌘⇧P"), onSelect: () => s.setPalette(true, "commands") },
-      { label: "Keyboard Shortcuts Reference", onSelect: openShortcuts },
+      { label: "Show all commands", hint: kbd("⌘⇧P"), onSelect: () => s.setPalette(true, "commands") },
+      { label: "Keyboard shortcuts reference", onSelect: openShortcuts },
       ...(mac ? [] : ([{ type: "separator" }, { label: "About REX", onSelect: () => window.dispatchEvent(new Event("rex:about")) }] as MenuItem[])),
     ],
   };
@@ -486,8 +486,25 @@ function InAppMenuBar({ collapsed }: { collapsed: boolean }) {
     setOpen({ index, keyboard });
   };
 
+  // After a menu closes the pointer usually still rests on its button; don't leave that button looking
+  // "stuck" highlighted until the pointer actually moves again.
+  const [quiet, setQuiet] = useState(false);
+  const pointer = useRef({ x: -1, y: -1 });
+  const quietAt = useRef({ x: -1, y: -1 });
+  useEffect(() => {
+    const track = (e: PointerEvent) => (pointer.current = { x: e.clientX, y: e.clientY });
+    window.addEventListener("pointermove", track, true);
+    window.addEventListener("pointerdown", track, true);
+    return () => {
+      window.removeEventListener("pointermove", track, true);
+      window.removeEventListener("pointerdown", track, true);
+    };
+  }, []);
+
   const close = useCallback(() => {
     setOpen(null);
+    quietAt.current = { ...pointer.current };
+    setQuiet(true);
     restoreFocus();
   }, [restoreFocus]);
 
@@ -540,13 +557,25 @@ function InAppMenuBar({ collapsed }: { collapsed: boolean }) {
   });
 
   const items: { label: string; items: MenuItem[] }[] = collapsed
-    ? [{ label: "Application Menu", items: menus.map<MenuItem>((m) => ({ type: "submenu", label: m.label, items: m.items })) }]
+    ? [{ label: "Application menu", items: menus.map<MenuItem>((m) => ({ type: "submenu", label: m.label, items: m.items })) }]
     : menus;
   const current = open ? items[open.index] : null;
   const anchor = open ? buttons()[open.index]?.getBoundingClientRect() : null;
 
   return (
-    <div ref={bar} role="menubar" aria-label="Application menu" data-menubar className="flex h-full shrink-0 items-center" onDoubleClick={(e) => e.stopPropagation()}>
+    <div
+      ref={bar}
+      role="menubar"
+      aria-label="Application menu"
+      data-menubar
+      className="flex h-full shrink-0 items-center"
+      onDoubleClick={(e) => e.stopPropagation()}
+      onPointerMove={(e) => {
+        // Browsers send synthetic moves on layout changes with the same coordinates; only a real move counts.
+        if (quiet && Math.abs(e.clientX - quietAt.current.x) + Math.abs(e.clientY - quietAt.current.y) > 2) setQuiet(false);
+      }}
+      onPointerLeave={() => quiet && setQuiet(false)}
+    >
       {items.map((m, i) => (
         <button
           key={m.label}
@@ -558,7 +587,7 @@ function InAppMenuBar({ collapsed }: { collapsed: boolean }) {
           title={collapsed ? "Application menu" : undefined}
           tabIndex={focusIdx === i ? 0 : -1}
           className={`flex h-[24px] items-center rounded px-[7px] text-[12.5px] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] ${
-            open?.index === i ? "bg-hover text-fg" : "text-fg/85 hover:bg-hover"
+            open?.index === i ? "bg-hover text-fg" : quiet ? "text-fg" : "text-fg hover:bg-hover"
           } ${collapsed ? "w-[28px] justify-center !px-0" : ""} ${!collapsed && menus[i]?.id === "app" ? "font-black tracking-tight !text-accent" : ""}`}
           onMouseDown={(e) => {
             e.preventDefault();
@@ -630,12 +659,12 @@ function AboutDialog() {
     ["Platform", `${isMac() ? "macOS" : "Windows / Linux"} · ${typeof navigator !== "undefined" ? navigator.userAgent.match(/(Chrome|Firefox|Safari)\/[\d.]+/)?.[0] ?? "browser" : ""}`],
   ];
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40" onMouseDown={() => setShow(false)}>
+    <div className="scrim fixed inset-0 z-[80] flex items-center justify-center" onMouseDown={() => setShow(false)}>
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="about-title"
-        className="w-[380px] max-w-[92vw] rounded-lg border border-line bg-elev p-5 shadow-2xl"
+        className="popover w-[380px] max-w-[92vw] p-5"
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           e.stopPropagation();
@@ -644,12 +673,12 @@ function AboutDialog() {
       >
         <div className="flex items-start justify-between">
           <div>
-            <div id="about-title" className="text-2xl font-black tracking-tight text-accent">
+            <div id="about-title" className="text-[20px] font-black tracking-tight text-accent">
               REX
             </div>
             <div className="mt-1 text-[12px] text-muted">{pkg.description}</div>
           </div>
-          <button className="icon-btn" aria-label="Close" onClick={() => setShow(false)}>
+          <button className="icon-btn" aria-label="Close" title="Close (Esc)" onClick={() => setShow(false)}>
             <X size={14} />
           </button>
         </div>

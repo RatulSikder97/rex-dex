@@ -49,10 +49,12 @@ export interface MissionData {
   plugins: InstalledPlugin[];
   /** First load of each source finished. */
   loaded: boolean;
+  /** Last poll couldn't reach the engine (cleared by the next successful poll). */
+  error: string | null;
   refresh: () => void;
 }
 
-const EMPTY: MissionData = { threads: [], runs: [], jobs: [], tasks: [], deliverables: [], media: [], git: null, plugins: [], loaded: false, refresh: () => {} };
+const EMPTY: MissionData = { threads: [], runs: [], jobs: [], tasks: [], deliverables: [], media: [], git: null, plugins: [], loaded: false, error: null, refresh: () => {} };
 
 const Ctx = createContext<MissionData>(EMPTY);
 export const useMissionData = () => useContext(Ctx);
@@ -92,6 +94,7 @@ export function MissionDataProvider({ children }: { children: ReactNode }) {
   const [git, setGit] = useStable<GitStatusLite | null>(null);
   const [plugins, setPlugins] = useStable<InstalledPlugin[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -115,6 +118,7 @@ export function MissionDataProvider({ children }: { children: ReactNode }) {
         api<MediaJob[]>("/api/create/jobs").catch(() => null),
       ]);
       if (stop) return;
+      setError(t ? null : "Couldn’t load tasks and runs. The REX engine may be restarting.");
       if (t) setThreads(t);
       // Swarm step runs are shown in the Swarms block, not as loose runs.
       if (r) setRuns(r.filter((x) => !x.thread_id?.startsWith("swarm:")));
@@ -146,8 +150,8 @@ export function MissionDataProvider({ children }: { children: ReactNode }) {
   }, [pid, hasRepo, version, tick, setThreads, setRuns, setJobs, setTasks, setDeliverables, setMedia, setGit, setPlugins]);
 
   const value = useMemo<MissionData>(
-    () => ({ threads, runs, jobs, tasks, deliverables, media, git, plugins, loaded, refresh }),
-    [threads, runs, jobs, tasks, deliverables, media, git, plugins, loaded, refresh],
+    () => ({ threads, runs, jobs, tasks, deliverables, media, git, plugins, loaded, error, refresh }),
+    [threads, runs, jobs, tasks, deliverables, media, git, plugins, loaded, error, refresh],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

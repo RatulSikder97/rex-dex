@@ -28,23 +28,40 @@ export default function BottomPanel() {
 
   return (
     <section aria-label="Panel" className="flex h-full flex-col border-t border-line bg-panel">
-      <div className="flex h-8 shrink-0 items-center gap-4 px-3" role="tablist" aria-label="Panel views">
-        {(["terminal", "output"] as const).map((t) => (
-          <button
-            key={t}
-            role="tab"
-            aria-selected={panelTab === t}
-            onClick={() => setPanelTab(t)}
-            className={`pb-[3px] text-[11px] font-semibold uppercase tracking-wider ${panelTab === t ? "border-b border-accent text-fg" : "border-b border-transparent text-muted hover:text-fg"}`}
-          >
-            {t}
-            {t === "output" && logs.some((l) => l.level === "error") && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-err align-middle" />}
-          </button>
-        ))}
+      <div className="flex h-[35px] shrink-0 items-center gap-1 pl-2 pr-2">
+        <div
+          role="tablist"
+          aria-label="Panel views"
+          className="flex h-full items-stretch gap-1"
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+            e.preventDefault();
+            const next = panelTab === "terminal" ? "output" : "terminal";
+            setPanelTab(next);
+            document.getElementById(`panel-tab-${next}`)?.focus();
+          }}
+        >
+          {(["terminal", "output"] as const).map((t) => (
+            <button
+              key={t}
+              id={`panel-tab-${t}`}
+              role="tab"
+              aria-selected={panelTab === t}
+              aria-controls={`panel-view-${t}`}
+              tabIndex={panelTab === t ? 0 : -1}
+              onClick={() => setPanelTab(t)}
+              className={`relative flex items-center px-2 text-[11px] font-semibold uppercase tracking-[.04em] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] ${panelTab === t ? "text-fg" : "text-muted hover:text-fg"}`}
+            >
+              {t}
+              {t === "output" && logs.some((l) => l.level === "error") && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-err" aria-label="has errors" />}
+              {panelTab === t && <span className="absolute inset-x-2 bottom-[6px] h-px bg-accent" aria-hidden />}
+            </button>
+          ))}
+        </div>
         <div className="flex-1" />
         {panelTab === "output" && (
           <div className="flex items-center gap-1">
-            <select className="input !h-[22px] !w-auto !py-0 !text-[11.5px]" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Filter by source">
+            <select className="input !h-[22px] !w-auto max-w-[160px] !py-0 !text-[12px]" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Filter by source">
               <option value="all">All sources</option>
               {sources.map((s) => (
                 <option key={s} value={s}>
@@ -52,7 +69,7 @@ export default function BottomPanel() {
                 </option>
               ))}
             </select>
-            <select className="input !h-[22px] !w-auto !py-0 !text-[11.5px]" value={level} onChange={(e) => setLevel(e.target.value as "all" | "error")} aria-label="Filter by level">
+            <select className="input !h-[22px] !w-auto !py-0 !text-[12px]" value={level} onChange={(e) => setLevel(e.target.value as "all" | "error")} aria-label="Filter by level">
               <option value="all">All levels</option>
               <option value="error">Errors only</option>
             </select>
@@ -70,7 +87,7 @@ export default function BottomPanel() {
             </button>
           </div>
         )}
-        <button className="icon-btn" title={maximized ? "Restore panel size" : "Maximize panel"} aria-label={maximized ? "Restore panel size" : "Maximize panel"} onClick={() => setLayout({ panelMaximized: !maximized })}>
+        <button className="icon-btn" title={maximized ? "Restore panel size" : "Maximize panel size"} aria-label={maximized ? "Restore panel size" : "Maximize panel"} onClick={() => setLayout({ panelMaximized: !maximized })}>
           {maximized ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
         </button>
         <button className="icon-btn" title={withShortcut("Close panel", "panel")} aria-label="Close panel" onClick={() => togglePanel(false)}>
@@ -78,12 +95,14 @@ export default function BottomPanel() {
         </button>
       </div>
       {/* Terminal stays mounted while hidden so sessions keep streaming. */}
-      <div className={`min-h-0 flex-1 ${panelTab === "terminal" ? "" : "hidden"}`}>
+      <div id="panel-view-terminal" role="tabpanel" aria-labelledby="panel-tab-terminal" className={`min-h-0 flex-1 ${panelTab === "terminal" ? "" : "hidden"}`}>
         <TerminalPanel />
       </div>
       <div
         ref={ref}
+        id="panel-view-output"
         role="log"
+        aria-label="Output"
         aria-live="off"
         onScroll={(e) => {
           const el = e.currentTarget;
@@ -94,15 +113,15 @@ export default function BottomPanel() {
         className={`min-h-0 flex-1 overflow-y-auto px-3 pb-2 font-mono text-[11.5px] leading-5 ${panelTab === "output" ? "" : "hidden"}`}
       >
         {shown.map((l, i) => (
-          <div key={i} className={`flex gap-3 whitespace-pre-wrap ${l.level === "error" ? "bg-err/5" : ""}`}>
+          <div key={i} className={`-mx-3 flex gap-3 whitespace-pre-wrap px-3 ${l.level === "error" ? "bg-[color-mix(in_srgb,var(--err)_7%,transparent)]" : ""}`}>
             <span className="shrink-0 text-faint">{new Date(l.ts).toLocaleTimeString()}</span>
-            <span className={`w-12 shrink-0 text-[10.5px] uppercase ${LEVEL_TEXT[l.level]}`}>{l.level === "ok" ? "ok" : l.level}</span>
+            <span className={`w-12 shrink-0 text-[11px] uppercase ${LEVEL_TEXT[l.level]}`}>{l.level === "ok" ? "ok" : l.level}</span>
             <span className={`shrink-0 ${LEVEL_TEXT[l.level]}`}>[{l.source}]</span>
             <span className={l.level === "error" ? "text-err" : "text-fg"}>{l.text}</span>
           </div>
         ))}
-        {!logs.length && <div className="text-faint">Activity from agents, plans, SEO audits, and video renders appears here.</div>}
-        {!!logs.length && !shown.length && <div className="text-faint">No output matches the current filter.</div>}
+        {!logs.length && <div className="pt-1 font-sans text-[12px] text-muted">Activity from agents, plans, SEO audits, and video renders appears here.</div>}
+        {!!logs.length && !shown.length && <div className="pt-1 font-sans text-[12px] text-muted">No output matches the current filter.</div>}
       </div>
     </section>
   );

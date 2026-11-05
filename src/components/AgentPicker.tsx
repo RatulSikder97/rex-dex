@@ -10,8 +10,8 @@ export default function AgentPicker({
   value,
   onChange,
   department,
-  className = "input h-7 w-auto text-[11.5px]",
-  title = "Terminal AI agent",
+  className = "input input-sm w-auto",
+  title = "Agent that runs this department",
 }: {
   value: ProviderId | "";
   onChange: (v: ProviderId | "") => void;
@@ -21,7 +21,7 @@ export default function AgentPicker({
 }) {
   const { agents, label, forDepartment } = useAgents();
   return (
-    <select className={className} value={value} onChange={(e) => onChange(e.target.value)} title={title}>
+    <select className={className} value={value} onChange={(e) => onChange(e.target.value)} title={title} aria-label={title}>
       <option value="">Auto · {label(forDepartment(department))}</option>
       {agents.map((a) => (
         <option key={a.id} value={a.id} disabled={!a.available}>

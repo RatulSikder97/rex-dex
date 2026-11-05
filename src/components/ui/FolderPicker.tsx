@@ -169,26 +169,28 @@ function Picker({ opts, onDone }: { opts: PickFolderOptions; onDone: (p: string 
   }, [active]);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onDone(null)} role="dialog" aria-modal="true" aria-label={opts.title ?? "Choose a folder"}>
-      <div className="flex h-[min(620px,90vh)] w-[min(820px,96vw)] flex-col overflow-hidden rounded-xl border border-line bg-elev shadow-[0_24px_64px_rgba(0,0,0,.5)]">
+    <div className="scrim fixed inset-0 z-[150] flex items-center justify-center p-4" onMouseDown={(e) => e.target === e.currentTarget && onDone(null)}>
+      <div role="dialog" aria-modal="true" aria-labelledby="folder-picker-title" className="popover flex h-[min(600px,90vh)] w-[min(780px,96vw)] flex-col overflow-hidden">
         {/* header */}
-        <div className="flex items-start gap-3 border-b border-line px-5 pb-3 pt-4">
+        <div className="flex items-start gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-[15px] font-semibold">{opts.title ?? "Choose a folder"}</h2>
-            {opts.message && <p className="mt-0.5 text-[12px] text-muted">{opts.message}</p>}
+            <h2 id="folder-picker-title" className="text-[13px] font-semibold">
+              {opts.title ?? "Choose a folder"}
+            </h2>
+            {opts.message && <p className="mt-0.5 text-[12.5px] text-muted">{opts.message}</p>}
           </div>
           {nativeSupported && (
-            <button className="btn btn-primary h-8 !rounded-lg" onClick={() => void native()} disabled={nativeBusy} title={`Use the ${systemName()} folder picker`}>
-              <MonitorUp size={14} /> {nativeBusy ? `Waiting for ${systemName()}…` : `Choose in ${systemName()}…`}
+            <button className="btn btn-sm" onClick={() => void native()} disabled={nativeBusy} title={`Use the ${systemName()} folder picker`}>
+              <MonitorUp size={13} /> {nativeBusy ? `Waiting for ${systemName()}…` : `Choose in ${systemName()}…`}
             </button>
           )}
-          <button className="icon-btn" onClick={() => onDone(null)} aria-label="Close">
+          <button className="icon-btn" onClick={() => onDone(null)} aria-label="Close" title="Close (Esc)">
             <X size={15} />
           </button>
         </div>
 
         {/* path bar */}
-        <div className="flex items-center gap-1 border-b border-line px-3 py-2">
+        <div className="flex h-[36px] items-center gap-1 border-b border-line px-2">
           <button className="icon-btn" onClick={() => list?.parent && void go(list.parent)} disabled={!list?.parent} title="Up (⌫)" aria-label="Up">
             <ArrowUp size={14} />
           </button>
@@ -200,17 +202,17 @@ function Picker({ opts, onDone }: { opts: PickFolderOptions; onDone: (p: string 
                 void go(pathInput.replace(/^~(?=\/|$)/, list?.home ?? "~"));
               }}
             >
-              <input className="input h-7 font-mono text-[12px]" autoFocus value={pathInput} onChange={(e) => setPathInput(e.target.value)} onBlur={() => setEditing(false)} aria-label="Folder path" />
+              <input className="input input-sm font-mono" autoFocus value={pathInput} onChange={(e) => setPathInput(e.target.value)} onBlur={() => setEditing(false)} aria-label="Folder path" />
             </form>
           ) : (
             <div className="flex min-w-0 flex-1 items-center overflow-x-auto text-[12.5px]" onDoubleClick={() => setEditing(true)}>
-              <button className="shrink-0 rounded px-1.5 py-0.5 text-muted hover:bg-hover hover:text-fg" onClick={() => void go("/")}>
+              <button className="shrink-0 rounded-[4px] px-1.5 py-0.5 text-muted hover:bg-hover hover:text-fg" onClick={() => void go("/")} title="Root folder">
                 /
               </button>
               {crumbs.map((c, i) => (
                 <span key={c.path} className="flex shrink-0 items-center">
                   {i > 0 && <ChevronRight size={12} className="text-faint" />}
-                  <button className={`rounded px-1.5 py-0.5 hover:bg-hover ${i === crumbs.length - 1 ? "font-medium text-fg" : "text-muted hover:text-fg"}`} onClick={() => void go(c.path)}>
+                  <button title={c.path} className={`rounded-[4px] px-1.5 py-0.5 hover:bg-hover ${i === crumbs.length - 1 ? "font-medium text-fg" : "text-muted hover:text-fg"}`} onClick={() => void go(c.path)}>
                     {c.name}
                   </button>
                 </span>
@@ -227,24 +229,36 @@ function Picker({ opts, onDone }: { opts: PickFolderOptions; onDone: (p: string 
 
         <div className="flex min-h-0 flex-1">
           {/* places */}
-          <nav className="w-44 shrink-0 space-y-0.5 overflow-y-auto border-r border-line p-2" aria-label="Places">
-            <div className="px-2 pb-1 pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-faint">Places</div>
+          <nav className="w-44 shrink-0 overflow-y-auto border-r border-line bg-side py-1.5" aria-label="Places">
+            <div className="section-title flex h-[24px] items-center px-3">Places</div>
             {list?.places.map((p) => (
               <button
                 key={p.path}
                 onClick={() => void go(p.path)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12.5px] ${list.path === p.path ? "bg-active text-fg" : "text-muted hover:bg-hover hover:text-fg"}`}
+                aria-current={list.path === p.path || undefined}
+                title={p.path}
+                className={`flex h-[24px] w-full items-center gap-2 px-3 text-left text-[13px] ${list.path === p.path ? "bg-active text-fg" : "text-muted hover:bg-hover hover:text-fg"}`}
               >
-                {p.label === "Home" ? <Home size={13} /> : <Folder size={13} />} <span className="truncate">{p.label}</span>
+                {p.label === "Home" ? <Home size={13} aria-hidden /> : <Folder size={13} aria-hidden />} <span className="truncate">{p.label}</span>
               </button>
             ))}
           </nav>
 
           {/* folders */}
-          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto p-1.5" role="listbox" aria-label="Folders">
-            {error && <div className="m-2 rounded-lg border border-err/40 bg-err/10 px-3 py-2 text-[12px] text-err">{error}</div>}
-            {!list && !error && <div className="p-4 text-[12px] text-muted">Loading…</div>}
-            {list && !list.entries.length && <div className="p-6 text-center text-[12px] text-muted">No folders here. Choose this folder, or create one.</div>}
+          <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1" role="listbox" aria-label="Folders">
+            {error && (
+              <div role="alert" className="mx-2 my-1 rounded-[4px] border border-[color-mix(in_srgb,var(--err)_40%,var(--border))] bg-[color-mix(in_srgb,var(--err)_10%,transparent)] px-3 py-2 text-[12px] text-err">
+                {error}
+              </div>
+            )}
+            {!list && !error && (
+              <div aria-busy="true" aria-label="Loading folders" className="space-y-2.5 px-3 py-2">
+                {[62, 48, 70, 54, 40, 66].map((w, i) => (
+                  <div key={i} className="skeleton h-[14px]" style={{ width: `${w}%` }} />
+                ))}
+              </div>
+            )}
+            {list && !list.entries.length && <div className="p-6 text-center text-[12.5px] text-muted">No folders here. Choose this folder, or create one.</div>}
             {list?.entries.map((e, i) => (
               <button
                 key={e.path}
@@ -256,12 +270,13 @@ function Picker({ opts, onDone }: { opts: PickFolderOptions; onDone: (p: string 
                   setActive(i);
                 }}
                 onDoubleClick={() => void go(e.path)}
-                className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[12.5px] ${selected === e.path ? "bg-accent/15 text-fg" : "hover:bg-hover"}`}
+                title={e.path}
+                className={`flex h-[26px] w-full items-center gap-2 px-3 text-left text-[13px] ${selected === e.path ? "bg-active text-fg" : "hover:bg-hover"}`}
               >
-                {e.git ? <FolderGit2 size={15} className="shrink-0 text-accent" /> : <Folder size={15} className="shrink-0 text-faint" />}
+                {e.git ? <FolderGit2 size={14} className="shrink-0 text-accent" aria-hidden /> : <Folder size={14} className="shrink-0 text-faint" aria-hidden />}
                 <span className="min-w-0 flex-1 truncate">{e.name}</span>
-                {e.git && <span className="rounded bg-accent/15 px-1.5 py-px text-[10px] text-accent">git</span>}
-                <ChevronRight size={13} className="shrink-0 text-faint" />
+                {e.git && <span className="pill pill-accent">git</span>}
+                <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden />
               </button>
             ))}
           </div>
@@ -270,17 +285,17 @@ function Picker({ opts, onDone }: { opts: PickFolderOptions; onDone: (p: string 
         {/* footer */}
         <div className="flex items-center gap-2 border-t border-line px-4 py-3">
           <div className="min-w-0 flex-1">
-            <div className="text-[10.5px] uppercase tracking-wider text-faint">Selected</div>
+            <div className="text-[11px] text-faint">Selected</div>
             <div className="truncate font-mono text-[12px]" title={selected ?? ""}>
               {selected ?? "—"}
             </div>
           </div>
           <span className="hidden text-[11px] text-faint sm:inline">Double-click to open · ⌘↵ choose</span>
-          <button className="btn h-8 !rounded-lg" onClick={() => onDone(null)}>
+          <button className="btn" onClick={() => onDone(null)}>
             Cancel
           </button>
-          <button className="btn btn-primary h-8 !rounded-lg" onClick={() => onDone(selected)} disabled={!selected}>
-            <Check size={14} /> {opts.confirmLabel ?? "Choose folder"}
+          <button className="btn btn-primary" onClick={() => onDone(selected)} disabled={!selected}>
+            <Check size={13} aria-hidden /> {opts.confirmLabel ?? "Choose folder"}
           </button>
         </div>
       </div>

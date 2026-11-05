@@ -1,6 +1,7 @@
 import "server-only";
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { IPty } from "node-pty";
@@ -58,7 +59,9 @@ export async function createTerminal(opts: { projectId?: string | null; cols: nu
   // node-pty is a native module; load lazily so nothing native runs at import time.
   const pty = await import("node-pty");
   const repoPath = opts.projectId ? getProject(opts.projectId)?.repo_path : undefined;
-  const cwd = repoPath && fs.existsSync(/*turbopackIgnore: true*/ repoPath) && fs.statSync(/*turbopackIgnore: true*/ repoPath).isDirectory() ? repoPath : process.cwd();
+  // No project: the desktop app's engine runs inside the app bundle, so start in the user's home instead.
+  const fallback = process.env.REX_DESKTOP ? os.homedir() : process.cwd();
+  const cwd = repoPath && fs.existsSync(/*turbopackIgnore: true*/ repoPath) && fs.statSync(/*turbopackIgnore: true*/ repoPath).isDirectory() ? repoPath : fallback;
   const shell = process.env.SHELL || "/bin/zsh";
   const env = agentEnv({
     TERM: "xterm-256color",

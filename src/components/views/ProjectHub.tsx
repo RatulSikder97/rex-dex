@@ -6,6 +6,7 @@ import { useWorkbench, type ProjectHubIntent } from "@/store/workbench";
 import { EmptyState } from "@/components/ui/empty";
 import { ProjectAvatar, openLogoStudio } from "@/components/ProjectLogo";
 import { Card, CopyButton, Dot, Pill, type OpsNav, type Tone } from "@/components/ops/shared";
+import { LoadingRows, Tabs } from "@/components/ui/kit";
 import ServersSection from "@/components/ops/ServersSection";
 import UptimeSection from "@/components/ops/UptimeSection";
 import DockerSection from "@/components/ops/DockerSection";
@@ -16,14 +17,14 @@ import GeneralSection, { type GeneralField } from "@/components/project/GeneralS
 import RepositorySection from "@/components/project/RepositorySection";
 import { asHubSection, useHubStatus, type HubSection } from "@/components/project/hubStatus";
 
-const SECTIONS: { id: HubSection; label: string; icon: LucideIcon; blurb: string }[] = [
-  { id: "general", label: "General", icon: Settings2, blurb: "Name, description, stage, website and the repository folder." },
-  { id: "git", label: "Repository & Git", icon: GitBranch, blurb: "Connect a remote, create the GitHub repo, sync and follow PRs / CI." },
-  { id: "servers", label: "Servers", icon: ServerIcon, blurb: "SSH hosts this project runs on: health, sessions, traffic, terminal." },
-  { id: "uptime", label: "Domains & Uptime", icon: Activity, blurb: "The project website and the endpoints REX checks every minute." },
-  { id: "deploy", label: "Deploy", icon: Rocket, blurb: "Containers and clusters: Docker on this Mac or a server, and Kubernetes." },
-  { id: "connections", label: "Connections", icon: Cable, blurb: "Services and desktop apps your department agents can use." },
-  { id: "agents", label: "Agents", icon: Bot, blurb: "Which agent each department runs on." },
+const SECTIONS: { value: HubSection; label: string; title: string; icon: LucideIcon; blurb: string }[] = [
+  { value: "general", label: "General", title: "General", icon: Settings2, blurb: "Name, description, stage, website and the repository folder." },
+  { value: "git", label: "Repository", title: "Repository and git", icon: GitBranch, blurb: "Connect a remote, create the GitHub repository, sync, and follow pull requests and CI." },
+  { value: "servers", label: "Servers", title: "Servers", icon: ServerIcon, blurb: "SSH hosts this project runs on: health, sessions, traffic and a terminal." },
+  { value: "uptime", label: "Domains", title: "Domains and uptime", icon: Activity, blurb: "The project website and the endpoints REX checks every minute." },
+  { value: "deploy", label: "Deploy", title: "Deploy", icon: Rocket, blurb: "Containers and clusters: Docker on this Mac or a server, and Kubernetes." },
+  { value: "connections", label: "Connections", title: "Connections", icon: Cable, blurb: "Services and desktop apps your department agents can use." },
+  { value: "agents", label: "Agents", title: "Agents", icon: Bot, blurb: "Which agent each department runs on." },
 ];
 
 const STAGE_TONE: Record<string, Tone> = { idea: "muted", planning: "muted", building: "accent", testing: "warn", launched: "ok", growing: "ok" };
@@ -52,9 +53,10 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
     if (section) setActive(asHubSection(section));
   }, [section]);
 
-  // Keep the active item visible in the horizontal (narrow) nav.
+  // Keep the active tab visible in the horizontal (narrow) tab row.
   useEffect(() => {
-    document.getElementById(`hub-nav-${active}`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const el = document.getElementById(`hub-tab-${active}`);
+    if (el?.offsetParent) el.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center">
-        {projectsLoaded ? <EmptyState icon={FolderCog} title="Project not found" hint="It may have been deleted. Pick another project from the title bar." /> : <p className="text-[12.5px] text-muted">Loading…</p>}
+        {projectsLoaded ? <EmptyState icon={FolderCog} title="Project not found" hint="It may have been deleted. Pick another project from the title bar." /> : <LoadingRows rows={4} className="w-[320px]" />}
       </div>
     );
   }
@@ -110,56 +112,62 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
   };
 
   const onNavKey = (e: React.KeyboardEvent, i: number) => {
-    const d = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
+    const d = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
     const to = e.key === "Home" ? 0 : e.key === "End" ? SECTIONS.length - 1 : d ? (i + d + SECTIONS.length) % SECTIONS.length : -1;
     if (to < 0) return;
     e.preventDefault();
-    document.getElementById(`hub-nav-${SECTIONS[to].id}`)?.focus();
+    go(SECTIONS[to].value);
+    document.getElementById(`hub-nav-${SECTIONS[to].value}`)?.focus();
   };
 
-  const meta = SECTIONS.find((s) => s.id === active)!;
+  const meta = SECTIONS.find((s) => s.value === active)!;
   const site = project.website_url.trim();
   const siteHref = site ? (/^https?:\/\//i.test(site) ? site : `https://${site}`) : null;
+  const stage = project.stage.charAt(0).toUpperCase() + project.stage.slice(1);
 
   return (
-    <div ref={main} className="@container h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl space-y-4 px-4 py-5 pb-16 @3xl:px-6">
+    <div ref={main} className="page @container">
+      <div className="page-inner !max-w-[1200px]">
         {/* ------------------------------------------------ header */}
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <ProjectAvatar project={project} size={44} onClick={() => openLogoStudio(project.id)} />
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="min-w-0 truncate text-lg font-semibold">{project.name}</h1>
+        <header className="page-head flex-wrap">
+          <div className="flex min-w-0 flex-1 basis-[260px] items-start gap-3">
+          <ProjectAvatar project={project} size={40} onClick={() => openLogoStudio(project.id)} />
+          <div className="page-head-main">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="page-title min-w-0 truncate" title={project.name}>
+                {project.name}
+              </h1>
               <Pill tone={STAGE_TONE[project.stage] ?? "muted"} title="Stage">
-                {project.stage}
+                {stage}
               </Pill>
             </div>
-            <div className="mt-1 flex min-w-0 items-center gap-2 text-[12px]">
+            <div className="mt-0.5 flex h-6 min-w-0 items-center gap-1">
               {project.repo_path ? (
                 <>
-                  <span className="min-w-0 truncate font-mono text-[11.5px] text-muted" title={project.repo_path}>
+                  <span className="min-w-0 truncate font-mono text-[12px] text-muted" title={project.repo_path}>
                     {project.repo_path}
                   </span>
-                  <CopyButton text={project.repo_path} label="Copy path" />
+                  <CopyButton text={project.repo_path} label="Copy path" iconOnly />
                 </>
               ) : (
-                <button className="flex items-center gap-1 text-warn hover:underline" onClick={() => editGeneral("repo")}>
-                  No repository folder — link one
+                <button className="text-[12px] text-warn hover:underline" onClick={() => editGeneral("repo")}>
+                  No repository folder. Link one
                 </button>
               )}
               {siteHref && (
-                <a href={siteHref} target="_blank" rel="noreferrer" className="hidden min-w-0 items-center gap-1 truncate text-accent hover:underline @2xl:flex" title={siteHref}>
-                  <Globe size={11} className="shrink-0" /> <span className="truncate">{site.replace(/^https?:\/\//, "")}</span>
+                <a href={siteHref} target="_blank" rel="noreferrer" className="ml-2 hidden min-w-0 shrink items-center gap-1 text-[12px] text-accent hover:underline @2xl:flex" title={siteHref}>
+                  <Globe size={11} className="shrink-0" aria-hidden /> <span className="truncate">{site.replace(/^https?:\/\//, "")}</span>
                 </a>
               )}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button className="btn h-7" onClick={() => openTab({ kind: "board", projectId: project.id }, `${project.name} · Board`)}>
-              <KanbanSquare size={12} /> Open board
+          </div>
+          <div className="page-actions">
+            <button className="btn btn-sm" onClick={() => openTab({ kind: "board", projectId: project.id }, `${project.name} · Board`)}>
+              <KanbanSquare size={12} aria-hidden /> Open board
             </button>
-            <button className="btn h-7" onClick={() => openOps()}>
-              <ServerCog size={12} /> Open Ops Center
+            <button className="btn btn-sm" onClick={() => openOps()}>
+              <ServerCog size={12} aria-hidden /> Open Ops
             </button>
             <button className="icon-btn" onClick={() => setReloadKey((k) => k + 1)} aria-label="Refresh project status" title="Refresh">
               <RefreshCw size={13} />
@@ -167,30 +175,39 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
           </div>
         </header>
 
-        {/* ------------------------------------------------ nav + section */}
-        <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-[200px_minmax(0,1fr)]">
-          <nav aria-label="Project sections" className="min-w-0 @3xl:sticky @3xl:top-0 @3xl:self-start">
-            <ul className="-mx-1 flex gap-1 overflow-x-auto border-b border-line px-1 [scrollbar-width:none] @3xl:mx-0 @3xl:flex-col @3xl:gap-0.5 @3xl:overflow-visible @3xl:border-b-0 @3xl:px-0 [&::-webkit-scrollbar]:hidden">
+        {/* ------------------------------------------------ nav: tabs when narrow, a settings-style list when wide */}
+        <Tabs
+          value={active}
+          onChange={go}
+          label="Project sections"
+          idPrefix="hub-tab"
+          className="mb-4 @3xl:hidden"
+          tabs={SECTIONS.map((s) => {
+            const st = status[s.value];
+            return { value: s.value, label: s.label, icon: s.icon, badge: st ? <Dot tone={st.tone} label={st.label} /> : undefined };
+          })}
+        />
+
+        <div className="grid grid-cols-1 gap-6 @3xl:grid-cols-[184px_minmax(0,1fr)]">
+          <nav aria-label="Project sections" className="hidden min-w-0 @3xl:sticky @3xl:top-0 @3xl:block @3xl:self-start">
+            <ul className="space-y-px">
               {SECTIONS.map((s, i) => {
-                const on = s.id === active;
-                const st = status[s.id];
+                const on = s.value === active;
+                const st = status[s.value];
                 return (
-                  <li key={s.id} className="shrink-0">
+                  <li key={s.value}>
                     <button
-                      id={`hub-nav-${s.id}`}
+                      id={`hub-nav-${s.value}`}
                       aria-current={on ? "page" : undefined}
-                      onClick={() => go(s.id)}
+                      tabIndex={on ? 0 : -1}
+                      onClick={() => go(s.value)}
                       onKeyDown={(e) => onNavKey(e, i)}
-                      title={st?.label}
-                      className={`flex w-full items-center gap-2 text-left text-[12.5px] ${
-                        on
-                          ? "-mb-px border-b-2 border-accent font-medium text-fg @3xl:mb-0 @3xl:border-b-0 @3xl:bg-hover"
-                          : "-mb-px border-b-2 border-transparent text-muted hover:text-fg @3xl:mb-0 @3xl:border-b-0 @3xl:hover:bg-hover/60"
-                      } px-2.5 pb-2 pt-1 @3xl:rounded-md @3xl:py-1.5`}
+                      title={st?.label ?? s.label}
+                      className={`row h-7 w-full rounded-[4px] px-2 text-left text-[12.5px] ${on ? "font-medium text-fg" : "text-muted hover:text-fg"}`}
                     >
-                      <s.icon size={13} className={on ? "text-accent" : ""} aria-hidden />
+                      <s.icon size={13} className={`shrink-0 ${on ? "text-accent" : ""}`} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">{s.label}</span>
-                      {st?.badge && <span className="hidden text-[10.5px] tabular-nums text-faint @3xl:inline">{st.badge}</span>}
+                      {st?.badge && <span className="text-[11px] tabular-nums text-faint">{st.badge}</span>}
                       {st && <Dot tone={st.tone} label={st.label} />}
                     </button>
                   </li>
@@ -200,9 +217,9 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
           </nav>
 
           <section className="@container min-w-0" aria-labelledby="hub-section-title">
-            <div className="mb-3">
-              <h2 id="hub-section-title" className="flex items-center gap-2 text-[15px] font-semibold">
-                <meta.icon size={15} className="text-accent" aria-hidden /> {meta.label}
+            <div className="mb-4">
+              <h2 id="hub-section-title" className="section-h">
+                {meta.title}
               </h2>
               <p className="mt-0.5 text-[12px] text-muted">{meta.blurb}</p>
             </div>
@@ -211,39 +228,47 @@ export default function ProjectHub({ projectId, section, intent }: { projectId: 
             {active === "git" && <RepositorySection project={project} git={git} connectKey={triggers.connect} onLinkFolder={() => editGeneral("repo")} />}
             {active === "servers" && <ServersSection nav={nav} addIntent={triggers.server} />}
             {active === "uptime" && (
-              <div className="space-y-4">
-                <Card title="Website" icon={<Globe size={14} />} action={<button className="btn h-7" onClick={() => editGeneral("website")}><Pencil size={12} /> Edit</button>}>
+              <div className="space-y-6">
+                <Card
+                  title="Website"
+                  icon={<Globe size={13} />}
+                  action={
+                    <button className="btn btn-sm" onClick={() => editGeneral("website")}>
+                      <Pencil size={12} aria-hidden /> Edit
+                    </button>
+                  }
+                >
                   {siteHref ? (
-                    <a href={siteHref} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 font-mono text-[12px] text-accent hover:underline">
-                      <span className="truncate">{siteHref}</span> <ExternalLink size={11} className="shrink-0" />
+                    <a href={siteHref} target="_blank" rel="noreferrer" title={siteHref} className="inline-flex max-w-full items-center gap-1 font-mono text-[12px] text-accent hover:underline">
+                      <span className="truncate">{siteHref}</span> <ExternalLink size={11} className="shrink-0" aria-hidden />
                     </a>
                   ) : (
-                    <p className="text-[12px] text-muted">No website set. Add it in General: SEO/AEO agents audit it and you can monitor it below.</p>
+                    <p className="text-[12px] text-muted">No website set. Add it in General: the SEO &amp; AEO agents audit it and you can monitor it below.</p>
                   )}
                 </Card>
                 <div>
-                  <h3 className="section-title mb-2">Uptime monitors</h3>
+                  <h3 className="mb-2 text-[13px] font-semibold">Uptime monitors</h3>
                   <UptimeSection nav={nav} project={project} addIntent={triggers.monitor} />
                 </div>
               </div>
             )}
             {active === "deploy" && (
               <div className="space-y-6">
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-elev/30 p-3">
-                  <p className="min-w-0 flex-1 text-[12px] text-muted">Traffic, server logs and the full overview live in the Ops Center.</p>
-                  <button className="btn h-7" onClick={() => openOps()}>
-                    <ServerCog size={12} /> Open full Ops Center
+                <div className="card flex flex-wrap items-center gap-2 px-3 py-2">
+                  <p className="min-w-0 flex-1 text-[12px] text-muted">Traffic, server logs and the full overview live in Ops.</p>
+                  <button className="btn btn-sm" onClick={() => openOps()}>
+                    <ServerCog size={12} aria-hidden /> Open Ops
                   </button>
                 </div>
                 <section aria-labelledby="hub-docker">
-                  <h3 id="hub-docker" className="section-title mb-2 flex items-center gap-1.5">
-                    <Boxes size={12} /> Docker
+                  <h3 id="hub-docker" className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold">
+                    <Boxes size={13} className="text-muted" aria-hidden /> Docker
                   </h3>
                   <DockerSection nav={nav} />
                 </section>
                 <section aria-labelledby="hub-k8s">
-                  <h3 id="hub-k8s" className="section-title mb-2 flex items-center gap-1.5">
-                    <Rocket size={12} /> Kubernetes
+                  <h3 id="hub-k8s" className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold">
+                    <Rocket size={13} className="text-muted" aria-hidden /> Kubernetes
                   </h3>
                   <K8sSection nav={nav} />
                 </section>

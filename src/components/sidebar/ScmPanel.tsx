@@ -1,9 +1,16 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Check, ChevronDown, ChevronRight, FileCode, GitBranch, Minus, Plus, RefreshCw, Sparkles, Undo2 } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FileCode, FolderGit2, FolderPlus, GitBranch, Minus, Plus, RefreshCw, Sparkles, Undo2 } from "lucide-react";
 import { api } from "@/lib/client";
 import { useActiveProject, useWorkbench } from "@/store/workbench";
 import { confirmDialog } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty";
+import { ErrorState, LoadingRows } from "@/components/ui/kit";
+import { openProjectSettings } from "@/components/workbench/actions";
+import { kbd } from "@/components/workbench/shortcuts";
+
+/** Rows rendered per group before a "Show more" row (a fresh repo can list thousands of files). */
+const PAGE = 200;
 
 type StatusLetter = "M" | "A" | "D" | "R" | "C" | "U" | "T" | "?";
 interface ChangeEntry {
@@ -42,6 +49,8 @@ const LETTER_COLOR: Record<string, string> = {
   C: "text-accent",
 };
 
+const STATUS_LABEL: Record<string, string> = { M: "Modified", T: "Type changed", A: "Added", "?": "Untracked", D: "Deleted", U: "Conflict", R: "Renamed", C: "Copied" };
+
 function letter(s: StatusLetter): string {
   return s === "?" ? "U" : s;
 }
@@ -58,6 +67,7 @@ export default function ScmPanel() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [limits, setLimits] = useState<Record<string, number>>({});
   const projectId = project?.id ?? null;
   const hasRepo = !!project?.repo_path;
 
@@ -130,25 +140,25 @@ export default function ScmPanel() {
     }
   }, [projectId, log]);
 
-  if (!project) return <p className="px-3 text-muted">Select a project.</p>;
-  if (!hasRepo) return <p className="px-3 text-muted">This project has no repository linked.</p>;
-  if (error)
+  if (!project) return <EmptyState compact icon={FolderPlus} title="No project selected" hint="Pick a project in the title bar to see its changes." />;
+  if (!hasRepo)
+    return <EmptyState compact icon={FolderGit2} title="No repository linked" hint="Link the project folder to track and commit changes." action={{ label: "Link a repo folder", onClick: () => openProjectSettings(project.id) }} />;
+  if (error) return <ErrorState compact title="Couldn’t read the git status" error={error} onRetry={() => void refresh()} />;
+  if (!status)
     return (
-      <div className="space-y-2 px-3">
-        <p className="text-[12px] text-err">{error}</p>
-        <button className="btn" onClick={() => void refresh()}>
-          <RefreshCw size={13} /> Retry
-        </button>
+      <div className="pl-5 pr-3 pt-1">
+        <div className="skeleton mb-2 h-[60px]" />
+        <div className="skeleton mb-3 h-[28px]" />
+        <LoadingRows rows={6} height={14} />
       </div>
     );
-  if (!status) return <p className="px-3 text-muted">Loading…</p>;
 
   if (!status.repo)
     return (
-      <div className="space-y-2 px-3">
-        <p className="text-[12px] text-muted">The folder for this project is not a git repository.</p>
+      <div className="space-y-2 pl-5 pr-3">
+        <p className="text-[12px] leading-relaxed text-muted">This project’s folder isn’t a git repository yet. Initialize one to track changes and commit.</p>
         <button className="btn btn-primary w-full justify-center" disabled={!!busy} onClick={() => void op("init", { op: "init" }).then(() => refresh())}>
-          <GitBranch size={13} /> Initialize Repository
+          <GitBranch size={13} /> Initialize repository
         </button>
       </div>
     );
@@ -172,15 +182,15 @@ export default function ScmPanel() {
   };
 
   const groups: { id: Group; title: string; items: ChangeEntry[] }[] = [
-    ...(status.conflicts.length ? [{ id: "conflicts" as const, title: "Merge Changes", items: status.conflicts }] : []),
-    { id: "staged", title: "Staged Changes", items: status.staged },
+    ...(status.conflicts.length ? [{ id: "conflicts" as const, title: "Merge changes", items: status.conflicts }] : []),
+    { id: "staged", title: "Staged changes", items: status.staged },
     { id: "unstaged", title: "Changes", items: status.unstaged },
   ];
 
   return (
     <div className="pb-3">
-      <div className="flex items-center gap-1.5 px-3 pb-2 text-[12px] text-muted">
-        <GitBranch size={13} />
+      <div className="flex h-[24px] items-center gap-1.5 pl-5 pr-2 text-[12px] text-muted">
+        <GitBranch size={13} aria-hidden />
         <span className="min-w-0 flex-1 truncate" title={status.upstream ?? undefined}>
           {status.branch ?? "(no branch)"}
           {status.detached && <span className="text-faint"> (detached)</span>}
@@ -190,17 +200,18 @@ export default function ScmPanel() {
             </span>
           )}
         </span>
-        <button className="icon-btn" title="Refresh" onClick={() => void refresh()}>
+        <button className="icon-btn" title="Refresh" aria-label="Refresh source control" aria-busy={!!busy} onClick={() => void refresh()}>
           <RefreshCw size={13} className={busy ? "animate-spin" : undefined} />
         </button>
       </div>
 
-      <div className="space-y-1.5 px-3 pb-2">
+      <div className="space-y-1.5 pb-2 pl-5 pr-3 pt-1">
         <div className="relative">
           <textarea
             className="input min-h-[56px] pr-7 font-sans"
             rows={3}
-            placeholder={`Message (⌘↵ to commit on "${status.branch ?? "HEAD"}")`}
+            aria-label="Commit message"
+            placeholder={`Message (${kbd("⌘↵")} to commit on “${status.branch ?? "HEAD"}”)`}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
@@ -212,52 +223,64 @@ export default function ScmPanel() {
           />
           <button
             className="icon-btn absolute right-1 top-1 !h-[22px] !w-[22px]"
-            title="Generate commit message with AI from staged changes"
+            title={status.staged.length ? "Write a commit message from the staged changes" : "Stage changes to write a commit message"}
+            aria-label="Write a commit message from the staged changes"
             disabled={!!busy || !status.staged.length}
             onClick={() => void generate()}
           >
-            <Sparkles size={13} className={busy === "ai" ? "animate-pulse text-accent" : undefined} />
+            <Sparkles size={13} className={busy === "ai" ? "text-accent" : undefined} />
           </button>
         </div>
-        <button
-          className="btn btn-primary w-full justify-center"
-          disabled={!!busy || !message.trim() || !status.staged.length}
-          title={!status.staged.length ? "Stage changes to commit" : undefined}
-          onClick={() => void commit()}
-        >
-          <Check size={13} /> {busy === "commit" ? "Committing…" : "Commit"}
-        </button>
+        {(() => {
+          // A washed-out primary reads as "broken"; when commit isn't possible yet show a quiet button that says why.
+          const ready = !busy && !!message.trim() && status.staged.length > 0;
+          const why = !status.staged.length ? "Stage changes to commit" : !message.trim() ? "Write a commit message" : undefined;
+          return (
+            <button className={`btn w-full justify-center ${ready || busy === "commit" ? "btn-primary" : ""}`} disabled={!ready} title={why ?? `Commit to ${status.branch ?? "HEAD"} (${kbd("⌘↵")})`} onClick={() => void commit()}>
+              <Check size={13} aria-hidden /> {busy === "commit" ? "Committing…" : "Commit"}
+            </button>
+          );
+        })()}
+        {!status.staged.length && status.unstaged.length > 0 && <p className="help !mt-1">Stage files with + to include them in the commit.</p>}
       </div>
 
       {groups.map((g) => (
         <div key={g.id}>
           <div
-            className="group flex h-[22px] cursor-pointer items-center gap-1 pl-1 pr-2 text-[11px] font-semibold uppercase tracking-wide text-muted hover:bg-hover"
+            role="button"
+            tabIndex={0}
+            aria-expanded={!collapsed[g.id]}
+            className="side-row group flex h-[22px] items-center gap-0.5 pl-1 pr-2 text-muted outline-none hover:bg-hover"
             onClick={() => setCollapsed((c) => ({ ...c, [g.id]: !c[g.id] }))}
+            onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), setCollapsed((c) => ({ ...c, [g.id]: !c[g.id] })))}
           >
-            {collapsed[g.id] ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
-            <span className="flex-1 truncate">{g.title}</span>
-            <span className="hidden items-center group-hover:flex" onClick={(e) => e.stopPropagation()}>
+            <span className="flex w-4 shrink-0 justify-center" aria-hidden>
+              {collapsed[g.id] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+            </span>
+            <span className="section-title flex-1 truncate">{g.title}</span>
+            <span className="hidden items-center group-focus-within:flex group-hover:flex" onClick={(e) => e.stopPropagation()}>
               {g.id === "staged" && g.items.length > 0 && (
-                <button className="icon-btn !h-5 !w-5" title="Unstage All" onClick={() => void op("unstage", { op: "unstage", paths: g.items.map((e) => e.path) })}>
+                <button className="icon-btn !h-5 !w-5" title="Unstage all" aria-label="Unstage all" onClick={() => void op("unstage", { op: "unstage", paths: g.items.map((e) => e.path) })}>
                   <Minus size={13} />
                 </button>
               )}
               {g.id === "unstaged" && g.items.length > 0 && (
-                <button className="icon-btn !h-5 !w-5" title="Discard All Changes" onClick={() => discard(g.items)}>
+                <button className="icon-btn !h-5 !w-5" title="Discard all changes" aria-label="Discard all changes" onClick={() => discard(g.items)}>
                   <Undo2 size={13} />
                 </button>
               )}
               {g.id !== "staged" && g.items.length > 0 && (
-                <button className="icon-btn !h-5 !w-5" title="Stage All" onClick={() => void op("stage", { op: "stage", paths: g.items.map((e) => e.path) })}>
+                <button className="icon-btn !h-5 !w-5" title="Stage all" aria-label="Stage all" onClick={() => void op("stage", { op: "stage", paths: g.items.map((e) => e.path) })}>
                   <Plus size={13} />
                 </button>
               )}
             </span>
-            <span className="ml-1 rounded-full bg-elev px-1.5 text-[10.5px] font-normal leading-4">{g.items.length}</span>
+            <span className="count ml-1" aria-label={`${g.items.length} files`}>
+              {g.items.length}
+            </span>
           </div>
           {!collapsed[g.id] &&
-            g.items.map((e) => {
+            g.items.slice(0, limits[g.id] ?? PAGE).map((e) => {
               const slash = e.path.lastIndexOf("/");
               const base = e.path.slice(slash + 1);
               const dir = slash >= 0 ? e.path.slice(0, slash) : "";
@@ -265,54 +288,71 @@ export default function ScmPanel() {
               return (
                 <div
                   key={`${g.id}:${e.path}`}
-                  className="group flex h-[22px] cursor-pointer items-center gap-1.5 pl-5 pr-2 text-[12.5px] hover:bg-hover"
+                  role="button"
+                  tabIndex={0}
+                  className="side-row group flex h-[22px] items-center gap-1.5 pl-[22px] pr-2 text-[13px] outline-none hover:bg-hover"
                   title={e.from ? `${e.from} → ${e.path}` : e.path}
                   onClick={() => openDiff(e, staged)}
+                  onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && ev.target === ev.currentTarget && (ev.preventDefault(), openDiff(e, staged))}
                 >
-                  <span className={`min-w-0 shrink truncate ${e.status === "D" ? "line-through opacity-80" : ""}`}>{base}</span>
+                  <span className={`min-w-0 shrink truncate ${e.status === "D" ? "text-muted line-through" : ""}`}>{base}</span>
                   <span className="min-w-0 flex-1 truncate text-[11px] text-faint">{dir}</span>
-                  <span className="hidden items-center group-hover:flex" onClick={(ev) => ev.stopPropagation()}>
+                  <span className="hidden items-center group-focus-within:flex group-hover:flex" onClick={(ev) => ev.stopPropagation()}>
                     {e.status !== "D" && (
-                      <button className="icon-btn !h-5 !w-5" title="Open File" onClick={() => openTab({ kind: "file", projectId: project.id, path: e.path }, base)}>
+                      <button className="icon-btn !h-5 !w-5" title="Open file" aria-label={`Open ${base}`} onClick={() => openTab({ kind: "file", projectId: project.id, path: e.path }, base)}>
                         <FileCode size={13} />
                       </button>
                     )}
                     {g.id === "unstaged" && (
-                      <button className="icon-btn !h-5 !w-5" title="Discard Changes" onClick={() => discard([e])}>
+                      <button className="icon-btn !h-5 !w-5" title="Discard changes" aria-label={`Discard changes in ${base}`} onClick={() => discard([e])}>
                         <Undo2 size={13} />
                       </button>
                     )}
                     {staged ? (
-                      <button className="icon-btn !h-5 !w-5" title="Unstage Changes" onClick={() => void op("unstage", { op: "unstage", paths: [e.path] })}>
+                      <button className="icon-btn !h-5 !w-5" title="Unstage changes" aria-label={`Unstage ${base}`} onClick={() => void op("unstage", { op: "unstage", paths: [e.path] })}>
                         <Minus size={13} />
                       </button>
                     ) : (
-                      <button className="icon-btn !h-5 !w-5" title="Stage Changes" onClick={() => void op("stage", { op: "stage", paths: [e.path] })}>
+                      <button className="icon-btn !h-5 !w-5" title="Stage changes" aria-label={`Stage ${base}`} onClick={() => void op("stage", { op: "stage", paths: [e.path] })}>
                         <Plus size={13} />
                       </button>
                     )}
                   </span>
-                  <span className={`w-3 shrink-0 text-center font-mono text-[11px] font-semibold ${LETTER_COLOR[e.status] ?? "text-muted"}`} title={e.status === "?" ? "Untracked" : undefined}>
+                  <span className={`w-3 shrink-0 text-center font-mono text-[11px] font-semibold ${LETTER_COLOR[e.status] ?? "text-muted"}`} title={STATUS_LABEL[e.status] ?? e.status} aria-label={STATUS_LABEL[e.status] ?? e.status}>
                     {letter(e.status)}
                   </span>
                 </div>
               );
             })}
+          {!collapsed[g.id] && g.items.length > (limits[g.id] ?? PAGE) && (
+            <button
+              type="button"
+              className="side-row flex h-[22px] w-full items-center pl-[22px] text-left text-[12px] text-accent hover:bg-hover"
+              onClick={() => setLimits((l) => ({ ...l, [g.id]: (l[g.id] ?? PAGE) + PAGE }))}
+            >
+              Show {Math.min(PAGE, g.items.length - (limits[g.id] ?? PAGE))} more of {(g.items.length - (limits[g.id] ?? PAGE)).toLocaleString()}
+            </button>
+          )}
+          {!collapsed[g.id] && !g.items.length && g.id === "unstaged" && <p className="py-1 pl-[22px] pr-3 text-[12px] text-faint">No changes in the working tree.</p>}
         </div>
       ))}
 
       {history.length > 0 && (
         <div className="mt-2">
-          <div
-            className="flex h-[22px] cursor-pointer items-center gap-1 pl-1 pr-2 text-[11px] font-semibold uppercase tracking-wide text-muted hover:bg-hover"
+          <button
+            type="button"
+            aria-expanded={collapsed.history === false}
+            className="side-row flex h-[22px] w-full items-center gap-0.5 pl-1 pr-2 text-left text-muted hover:bg-hover"
             onClick={() => setCollapsed((c) => ({ ...c, history: c.history === false }))}
           >
-            {collapsed.history === false ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-            <span className="flex-1">Recent Commits</span>
-          </div>
+            <span className="flex w-4 shrink-0 justify-center" aria-hidden>
+              {collapsed.history === false ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </span>
+            <span className="section-title flex-1">Recent commits</span>
+          </button>
           {collapsed.history === false &&
             history.map((h) => (
-              <div key={h.hash} className="flex h-[22px] items-center gap-2 pl-5 pr-2 text-[12px]" title={`${h.hash}\n${h.author} · ${new Date(h.date).toLocaleString()}`}>
+              <div key={h.hash} className="flex h-[22px] items-center gap-2 pl-[22px] pr-2 text-[13px]" title={`${h.hash}\n${h.author} · ${new Date(h.date).toLocaleString()}`}>
                 <span className="shrink-0 font-mono text-[11px] text-accent">{h.short}</span>
                 <span className="min-w-0 flex-1 truncate">{h.subject}</span>
               </div>

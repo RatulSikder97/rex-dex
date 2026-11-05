@@ -4,15 +4,19 @@ import { Network, Plus, SquareKanban } from "lucide-react";
 import { timeAgo } from "@/lib/client";
 import { DeptIcon } from "@/components/icons";
 import { EmptyState, Skeleton } from "@/components/ui/empty";
-import { useActiveProject, useDepartments } from "@/store/workbench";
+import { ErrorState, Page, PageHeader } from "@/components/ui/kit";
+import { useActiveProject, useDepartments, useWorkbench } from "@/store/workbench";
 import SwarmComposer from "./SwarmComposer";
 import { SYNTH_KEY, openSwarm, useSwarms, type Swarm } from "./api";
 import { StatusPill, StepBar, progressOf } from "./ui";
+
+const PAGE = 100;
 
 /** All swarms for the active project. `compose` (a timestamp) opens the composer when recent. */
 export default function SwarmsList({ compose }: { compose?: number }) {
   const project = useActiveProject();
   const { swarms, error } = useSwarms(project?.id);
+  const bump = useWorkbench((s) => s.bump);
   const [composing, setComposing] = useState(false);
 
   // Only honor a fresh request (the tab spec is persisted; don't reopen the composer on reload).
@@ -24,101 +28,102 @@ export default function SwarmsList({ compose }: { compose?: number }) {
   const past = (swarms ?? []).filter((s) => !active.includes(s));
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl space-y-6 p-6 pb-16">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-lg font-semibold">
-              <Network size={18} className="text-accent" /> Agent swarms
-            </h1>
-            <p className="mt-0.5 max-w-2xl text-[12.5px] leading-relaxed text-muted">
-              Give a goal (or a board task) to the Chief of Staff. It plans department steps, runs independent ones in parallel on their terminal agents, passes results down the pipeline and merges everything into one deliverable.
-            </p>
-          </div>
-          <button className="btn btn-primary !h-8 !rounded-lg !px-3" onClick={() => setComposing(true)} disabled={!project}>
+    <Page>
+      <PageHeader
+        title="Swarms"
+        description="Several departments work on one goal in parallel, then merge the results into one deliverable."
+        actions={
+          <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)} disabled={!project}>
             <Plus size={13} /> New swarm
           </button>
+        }
+      />
+
+      {!project && <EmptyState icon={Network} title="No project selected" hint="Pick a project to see its swarms." />}
+      {project && !swarms && (
+        <div className="overflow-hidden rounded-[6px] border border-line" aria-busy="true" aria-label="Loading">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex h-10 items-center gap-3 border-b border-line px-3 last:border-b-0">
+              <Skeleton className="h-[18px] w-16" />
+              <Skeleton className="h-3 flex-1" />
+              <Skeleton className="h-1 w-20" />
+            </div>
+          ))}
         </div>
+      )}
+      {project && error && !swarms?.length && <ErrorState title="Couldn’t load swarms" error={`${error}. Check that REX is running, then retry.`} onRetry={bump} />}
+      {project && swarms && !swarms.length && !error && (
+        <div className="rounded-[6px] border border-dashed border-line">
+          <EmptyState
+            icon={Network}
+            title="No swarms yet"
+            hint="Give one goal to several departments at once. You can also start a swarm from a task on the board."
+            action={{ label: "New swarm", icon: Plus, onClick: () => setComposing(true) }}
+          />
+        </div>
+      )}
 
-        {!project && <EmptyState icon={Network} title="No project selected" hint="Pick a project to see its swarms." />}
-        {project && !swarms && (
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-32 rounded-xl" />
-            ))}
-          </div>
-        )}
-        {project && error && !swarms?.length && <p className="text-[12.5px] text-err">{error}</p>}
-        {project && swarms && !swarms.length && (
-          <div className="rounded-xl border border-dashed border-line">
-            <EmptyState
-              icon={Network}
-              title="No swarms yet"
-              hint="Start one here, or hover a task on the Board and click Swarm to have several departments work on it together."
-              action={{ label: "New swarm", icon: Plus, onClick: () => setComposing(true) }}
-            />
-          </div>
-        )}
-
-        {!!active.length && <Group title="Active" swarms={active} />}
+      <div className="space-y-5">
+        {!!active.length && <Group title="Running" swarms={active} />}
         {!!past.length && <Group title="Finished" swarms={past} />}
       </div>
       {composing && <SwarmComposer onClose={() => setComposing(false)} />}
-    </div>
+    </Page>
   );
 }
 
 function Group({ title, swarms }: { title: string; swarms: Swarm[] }) {
+  const [limit, setLimit] = useState(PAGE);
+  const id = `swarms-${title.toLowerCase()}`;
   return (
-    <section className="space-y-2">
-      <h2 className="section-title">
-        {title} · {swarms.length}
+    <section aria-labelledby={id}>
+      <h2 id={id} className="section-title mb-1.5 flex items-center gap-1.5">
+        {title} <span className="count">{swarms.length}</span>
       </h2>
-      <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-        {swarms.map((s) => (
-          <SwarmCard key={s.id} swarm={s} />
+      <ul className="overflow-hidden rounded-[6px] border border-line bg-side">
+        {swarms.slice(0, limit).map((s) => (
+          <li key={s.id} className="border-b border-line last:border-b-0">
+            <SwarmRow swarm={s} />
+          </li>
         ))}
-      </div>
+      </ul>
+      {swarms.length > limit && (
+        <button className="btn btn-ghost btn-sm mt-1.5" onClick={() => setLimit((l) => l + PAGE)}>
+          Show more ({swarms.length - limit})
+        </button>
+      )}
     </section>
   );
 }
 
-export function SwarmCard({ swarm }: { swarm: Swarm }) {
+/** Dense list row: status · title · departments · step progress · time. */
+export function SwarmRow({ swarm }: { swarm: Swarm }) {
   const { getDepartment } = useDepartments();
   const { done, total } = progressOf(swarm);
   const depts = [...new Set(swarm.steps.filter((s) => s.key !== SYNTH_KEY).map((s) => s.department))];
   const headline = swarm.goal.split("\n").find((l) => l.trim()) ?? "Swarm";
   return (
-    <button
-      className="flex flex-col gap-2.5 rounded-xl border border-line bg-elev/30 p-3.5 text-left transition-colors hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] hover:bg-elev"
-      onClick={() => openSwarm(swarm)}
-    >
-      <span className="flex items-center gap-2">
+    <button data-swarm-row className="@container flex h-10 w-full min-w-0 items-center gap-3 px-3 text-left hover:bg-hover" onClick={() => openSwarm(swarm)}>
+      <span className="w-[112px] shrink-0">
         <StatusPill status={swarm.status} />
-        {swarm.task_id && (
-          <span className="flex items-center gap-1 text-[11px] text-faint" title="Linked to a board task">
-            <SquareKanban size={11} /> task
-          </span>
-        )}
-        <span className="flex-1" />
-        <span className="text-[11px] text-faint">{timeAgo(swarm.created_at)}</span>
       </span>
-      <span className="line-clamp-2 text-[13px] font-medium leading-snug">{headline}</span>
-      <StepBar swarm={swarm} />
-      <span className="flex items-center gap-2 text-[11.5px] text-muted">
-        <span className="flex -space-x-1">
-          {depts.slice(0, 6).map((id) => {
-            const d = getDepartment(id);
-            return (
-              <span key={id} className="grid h-5 w-5 place-items-center rounded-full border border-[var(--bg-elev)]" style={{ background: `color-mix(in srgb, ${d.color} 22%, var(--bg-elev))`, color: d.color }} title={d.name}>
-                <DeptIcon name={d.icon} size={10} />
-              </span>
-            );
-          })}
-        </span>
-        <span className="flex-1" />
-        <span className="tabular-nums">{total ? `${done}/${total} steps` : swarm.status === "planning" ? "planning…" : "no plan"}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px]" title={headline}>
+        {headline}
       </span>
+      {swarm.task_id && <SquareKanban size={13} className="shrink-0 text-faint" aria-label="Linked to a board task" />}
+      <span className="hidden shrink-0 items-center gap-0.5 @xl:flex" aria-label={depts.map((id) => getDepartment(id).name).join(", ")}>
+        {depts.slice(0, 5).map((id) => {
+          const d = getDepartment(id);
+          return (
+            <span key={id} className="grid h-5 w-5 place-items-center rounded-[4px]" style={{ background: `color-mix(in srgb, ${d.color} 18%, transparent)`, color: d.color }} title={d.name}>
+              <DeptIcon name={d.icon} size={11} />
+            </span>
+          );
+        })}
+      </span>
+      <StepBar swarm={swarm} className="w-20 shrink-0" />
+      <span className="w-12 shrink-0 text-right text-[11px] tabular-nums text-muted">{total ? `${done}/${total}` : swarm.status === "planning" ? "…" : "—"}</span>
+      <span className="w-14 shrink-0 text-right text-[11px] text-faint">{timeAgo(swarm.created_at)}</span>
     </button>
   );
 }

@@ -1,8 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { CaseSensitive, ChevronDown, ChevronRight, File, Regex, X } from "lucide-react";
+import { CaseSensitive, ChevronDown, ChevronRight, File, FolderGit2, FolderPlus, Regex, Search as SearchIcon, X } from "lucide-react";
 import { api } from "@/lib/client";
 import { useActiveProject, useWorkbench } from "@/store/workbench";
+import { EmptyState } from "@/components/ui/empty";
+import { openProjectSettings } from "@/components/workbench/actions";
+
+/** Files rendered before a "Show more" row (a broad query can match thousands). */
+const FILE_PAGE = 100;
 
 interface SearchMatch {
   line: number;
@@ -44,9 +49,10 @@ function ToggleBtn({ on, title, onClick, children }: { on: boolean; title: strin
     <button
       type="button"
       title={title}
+      aria-label={title}
       aria-pressed={on}
       onClick={onClick}
-      className={`inline-flex h-[20px] w-[22px] items-center justify-center rounded-[3px] ${on ? "bg-active text-fg ring-1 ring-accent" : "text-muted hover:bg-hover hover:text-fg"}`}
+      className={`inline-flex h-[20px] w-[22px] items-center justify-center rounded-[4px] ${on ? "bg-active text-fg shadow-[inset_0_0_0_1px_var(--accent)]" : "text-muted hover:bg-hover hover:text-fg"}`}
     >
       {children}
     </button>
@@ -67,6 +73,7 @@ export default function SearchPanel() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [limit, setLimit] = useState(FILE_PAGE);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const projectId = project?.id ?? null;
@@ -93,6 +100,7 @@ export default function SearchPanel() {
           setResult(r);
           setError(null);
           setCollapsed({});
+          setLimit(FILE_PAGE);
         })
         .catch((e) => my === seq.current && setError(e instanceof Error ? e.message : String(e)))
         .finally(() => my === seq.current && setLoading(false));
@@ -100,40 +108,42 @@ export default function SearchPanel() {
     return () => clearTimeout(t);
   }, [projectId, hasRepo, q, regex, matchCase, glob, version]);
 
-  if (!project) return <p className="px-3 text-muted">Select a project.</p>;
-  if (!hasRepo) return <p className="px-3 text-muted">This project has no repository linked.</p>;
+  if (!project) return <EmptyState compact icon={FolderPlus} title="No project selected" hint="Pick a project in the title bar to search its files." />;
+  if (!hasRepo)
+    return <EmptyState compact icon={FolderGit2} title="No repository linked" hint="Link the project folder to search its files." action={{ label: "Link a repo folder", onClick: () => openProjectSettings(project.id) }} />;
 
   const fileCount = result?.files.length ?? 0;
 
   return (
     <div className="flex flex-col pb-3">
-      <div className="space-y-1.5 px-3 pb-2">
+      <div className="space-y-1.5 pb-2 pl-5 pr-3">
         <div className="relative">
           <input
             ref={inputRef}
-            className="input pr-[54px]"
+            className="input input-sm pr-[54px]"
             placeholder="Search"
+            aria-label="Search in files"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && setQ("")}
           />
           <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-            <ToggleBtn on={matchCase} title="Match Case" onClick={() => setMatchCase((v) => !v)}>
+            <ToggleBtn on={matchCase} title="Match case" onClick={() => setMatchCase((v) => !v)}>
               <CaseSensitive size={15} />
             </ToggleBtn>
-            <ToggleBtn on={regex} title="Use Regular Expression" onClick={() => setRegex((v) => !v)}>
+            <ToggleBtn on={regex} title="Use regular expression" onClick={() => setRegex((v) => !v)}>
               <Regex size={13} />
             </ToggleBtn>
           </div>
         </div>
-        <button className="text-[11px] text-faint hover:text-fg" onClick={() => setShowGlob((v) => !v)}>
-          {showGlob ? "▾" : "▸"} files to include
+        <button type="button" className="-ml-1 flex h-[18px] items-center gap-0.5 rounded-[4px] pr-1 text-[11px] text-muted hover:text-fg" aria-expanded={showGlob} onClick={() => setShowGlob((v) => !v)}>
+          {showGlob ? <ChevronDown size={13} aria-hidden /> : <ChevronRight size={13} aria-hidden />} Files to include
         </button>
         {showGlob && (
           <div className="relative">
-            <input className="input pr-7" placeholder="e.g. *.ts, src/**" value={glob} onChange={(e) => setGlob(e.target.value)} />
+            <input className="input input-sm pr-7" placeholder="e.g. *.ts, src/**" aria-label="Files to include" value={glob} onChange={(e) => setGlob(e.target.value)} />
             {glob && (
-              <button className="icon-btn absolute right-0.5 top-1/2 !h-5 !w-5 -translate-y-1/2" title="Clear" onClick={() => setGlob("")}>
+              <button className="icon-btn absolute right-0.5 top-1/2 !h-5 !w-5 -translate-y-1/2" title="Clear" aria-label="Clear files to include" onClick={() => setGlob("")}>
                 <X size={12} />
               </button>
             )}
@@ -142,7 +152,7 @@ export default function SearchPanel() {
       </div>
 
       {q && (
-        <div className="px-3 pb-1 text-[11.5px] text-muted">
+        <div className="pb-1 pl-5 pr-3 text-[12px] text-muted" role="status">
           {error ? (
             <span className="text-err">{error}</span>
           ) : loading && !result ? (
@@ -155,47 +165,64 @@ export default function SearchPanel() {
                 {loading && <span className="text-faint"> · updating…</span>}
               </>
             ) : (
-              "No results found."
+              "No results. Check the spelling or widen the files to include."
             )
           ) : null}
         </div>
       )}
 
-      {result?.files.map((f) => {
+      {!q && (
+        <div className="flex flex-col items-center gap-1.5 px-5 pt-6 text-center text-[12px] text-muted">
+          <SearchIcon size={18} strokeWidth={1.6} className="text-faint" aria-hidden />
+          Type to search every file in {project.name}.
+        </div>
+      )}
+
+      {result?.files.slice(0, limit).map((f) => {
         const isCollapsed = collapsed[f.path];
         const slash = f.path.lastIndexOf("/");
         const base = f.path.slice(slash + 1);
         const dir = slash >= 0 ? f.path.slice(0, slash) : "";
         return (
           <div key={f.path}>
-            <div
-              className="group flex h-[22px] cursor-pointer items-center gap-1 pl-2 pr-2 text-[12.5px] hover:bg-hover"
+            <button
+              type="button"
+              className="side-row flex h-[22px] w-full items-center gap-1 pl-2 pr-2 text-left text-[13px] hover:bg-hover"
               title={f.path}
+              aria-expanded={!isCollapsed}
               onClick={() => setCollapsed((c) => ({ ...c, [f.path]: !c[f.path] }))}
             >
-              {isCollapsed ? <ChevronRight size={13} className="text-faint" /> : <ChevronDown size={13} className="text-faint" />}
-              <File size={14} className="text-faint" />
-              <span className="shrink-0 truncate">{base}</span>
+              {isCollapsed ? <ChevronRight size={14} className="shrink-0 text-faint" aria-hidden /> : <ChevronDown size={14} className="shrink-0 text-faint" aria-hidden />}
+              <File size={14} className="shrink-0 text-faint" aria-hidden />
+              <span className="min-w-0 shrink truncate">{base}</span>
               <span className="min-w-0 flex-1 truncate text-[11px] text-faint">{dir}</span>
-              <span className="shrink-0 rounded-full bg-elev px-1.5 text-[10.5px] leading-4 text-muted">{f.matches.length}</span>
-            </div>
+              <span className="count shrink-0" aria-label={`${f.matches.length} matches`}>
+                {f.matches.length}
+              </span>
+            </button>
             {!isCollapsed &&
               f.matches.map((m, i) => (
-                <div
+                <button
+                  type="button"
                   key={`${m.line}:${i}`}
-                  className="flex h-[22px] cursor-pointer items-center gap-2 pl-[38px] pr-2 font-mono text-[11.5px] text-muted hover:bg-hover hover:text-fg"
-                  title={`${f.path}:${m.line}`}
+                  className="side-row flex h-[22px] w-full items-center gap-2 pl-[38px] pr-2 text-left font-mono text-[12px] text-muted hover:bg-hover hover:text-fg"
+                  title={`${f.path}:${m.line}\n${m.text.trim()}`}
                   onClick={() => projectId && openTab({ kind: "file", projectId, path: f.path }, base)}
                 >
                   <span className="min-w-0 flex-1 overflow-hidden">
                     <Preview m={m} />
                   </span>
-                  <span className="shrink-0 text-[10.5px] text-faint">{m.line}</span>
-                </div>
+                  <span className="shrink-0 text-[11px] tabular-nums text-faint">{m.line}</span>
+                </button>
               ))}
           </div>
         );
       })}
+      {result && result.files.length > limit && (
+        <button type="button" className="side-row flex h-[22px] w-full items-center pl-7 text-left text-[12px] text-accent hover:bg-hover" onClick={() => setLimit((l) => l + FILE_PAGE)}>
+          Show {Math.min(FILE_PAGE, result.files.length - limit)} more files of {(result.files.length - limit).toLocaleString()}
+        </button>
+      )}
     </div>
   );
 }

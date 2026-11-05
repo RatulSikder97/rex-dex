@@ -30,12 +30,12 @@ const KIND_PILL: Record<"ai" | "search" | "bot", { tone: Tone; label: string }> 
 };
 
 export default function TrafficSection({ nav }: { nav: OpsNav }) {
-  const { data: list, error, setData } = useOpsFetch<ServerWithLast[]>(serversUrl(nav.projectId), nav.reloadKey);
+  const { data: list, error, setData, reload } = useOpsFetch<ServerWithLast[]>(serversUrl(nav.projectId), nav.reloadKey);
   const log = useWorkbench((s) => s.log);
   const [busy, setBusy] = useState(false);
   const server = list?.find((s) => s.id === nav.serverId) ?? list?.[0] ?? null;
 
-  if (!list && error) return <ErrorBox title="Couldn't load servers">{error}</ErrorBox>;
+  if (!list && error) return <ErrorBox title="Couldn't load servers" error={error} onRetry={() => void reload()} />;
   if (!list) return <LoadingGrid n={4} />;
   if (!list.length)
     return (
@@ -64,7 +64,7 @@ export default function TrafficSection({ nav }: { nav: OpsNav }) {
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex min-w-0 items-center gap-2 text-[12px] text-muted">
           Server
-          <select className="input h-7 w-56" value={server?.id ?? ""} onChange={(e) => nav.setServerId(e.target.value)} aria-label="Server">
+          <select className="input input-sm w-48" value={server?.id ?? ""} onChange={(e) => nav.setServerId(e.target.value)} aria-label="Server">
             {list.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -72,8 +72,8 @@ export default function TrafficSection({ nav }: { nav: OpsNav }) {
             ))}
           </select>
         </label>
-        <span className="min-w-0 flex-1 truncate text-[11.5px] text-faint">{snap ? `Snapshot ${timeAgo(snap.at)}` : "No snapshot yet"}</span>
-        <button className="btn h-7" onClick={() => void refresh()} disabled={busy}>
+        <span className="min-w-0 flex-1 truncate text-[12px] text-faint">{snap ? `Snapshot ${timeAgo(snap.at)}` : "No snapshot yet"}</span>
+        <button className="btn btn-sm" onClick={() => void refresh()} disabled={busy}>
           {busy ? <Spinner /> : <RefreshCw size={12} />} {busy ? "Reading logs…" : "Refresh snapshot"}
         </button>
       </div>
@@ -83,9 +83,7 @@ export default function TrafficSection({ nav }: { nav: OpsNav }) {
           <EmptyState compact icon={RefreshCw} title="No snapshot yet" hint="Take a snapshot to parse the access log." action={{ label: "Take snapshot", onClick: () => void refresh() }} />
         </Card>
       ) : !snap.ok ? (
-        <ErrorBox title="The last snapshot failed" action={<button className="btn h-7" onClick={() => nav.go("servers", server?.id)}>Open server</button>}>
-          {snap.error}
-        </ErrorBox>
+        <ErrorBox title="The last snapshot failed" error={snap.error ?? "Unknown error"} action={<button className="btn btn-sm" onClick={() => nav.go("servers", server?.id)}>Open server</button>} onRetry={() => void refresh()} />
       ) : (
         <>
           {snap.traffic ? <TrafficPanels t={snap.traffic} serverName={server!.name} /> : <NoLog logPath={server!.log_path} onEdit={() => nav.go("servers", server!.id)} />}
@@ -98,7 +96,7 @@ export default function TrafficSection({ nav }: { nav: OpsNav }) {
 
 function NoLog({ logPath, onEdit }: { logPath: string | null; onEdit: () => void }) {
   return (
-    <Card title="No access log data" icon={<FileText size={14} />}>
+    <Card title="No access log data" icon={<FileText size={13} />}>
       <div className="space-y-2 text-[12px] leading-relaxed text-muted">
         <p>
           {logPath ? (
@@ -113,7 +111,7 @@ function NoLog({ logPath, onEdit }: { logPath: string | null; onEdit: () => void
         <p>
           The SSH user needs read access — typically add it to the <code className="font-mono text-fg">adm</code> group: <code className="font-mono text-fg">sudo usermod -aG adm $USER</code>.
         </p>
-        <button className="btn h-7" onClick={onEdit}>
+        <button className="btn btn-sm" onClick={onEdit}>
           Edit server
         </button>
       </div>
@@ -144,7 +142,7 @@ function TrafficPanels({ t, serverName }: { t: Traffic; serverName: string }) {
 
   return (
     <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-2">
-      <Card title="Requests per minute · last 60 min" icon={<Network size={14} />} className="@4xl:col-span-2">
+      <Card title="Requests per minute · last 60 min" icon={<Network size={13} />} className="@4xl:col-span-2">
         <div className="mb-3 grid grid-cols-2 gap-3 @2xl:grid-cols-4">
           <Stat label="Last hour" value={fmtNum(hourTotal)} sub={`peak ${peak}/min`} />
           <Stat label="Analysed lines" value={fmtNum(t.lines)} sub={t.source} />
@@ -152,13 +150,13 @@ function TrafficPanels({ t, serverName }: { t: Traffic; serverName: string }) {
           <Stat label="Humans" value={botTotal ? `${Math.round((t.bots.human / botTotal) * 100)}%` : "—"} sub={`${fmtNum(t.bots.human)} requests`} />
         </div>
         <Bars values={hour.values} height={80} label={`Requests per minute, last hour: total ${hourTotal}, peak ${peak}`} />
-        <div className="mt-1 flex justify-between text-[10.5px] tabular-nums text-faint">
+        <div className="mt-1 flex justify-between text-[11px] tabular-nums text-faint">
           <span>{new Date(hour.end - 59 * 60000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           <span>{new Date(hour.end).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
         </div>
       </Card>
 
-      <Card title="Status codes" icon={<Globe size={14} />}>
+      <Card title="Status codes" icon={<Globe size={13} />}>
         <StackBar
           label="Status codes"
           parts={[
@@ -172,10 +170,10 @@ function TrafficPanels({ t, serverName }: { t: Traffic; serverName: string }) {
 
       <Card
         title="Bots vs humans"
-        icon={<Bot size={14} />}
+        icon={<Bot size={13} />}
         action={
-          <button className="btn h-7" onClick={askSeo}>
-            <Search size={12} /> Ask SEO &amp; AEO about crawler traffic
+          <button className="btn btn-sm" onClick={askSeo} title="Ask SEO & AEO about crawler traffic">
+            <Search size={12} aria-hidden /> Ask SEO &amp; AEO
           </button>
         }
       >
@@ -190,13 +188,13 @@ function TrafficPanels({ t, serverName }: { t: Traffic; serverName: string }) {
         />
         {!!t.aiCrawlers.length && (
           <div className="mt-3">
-            <div className="mb-1 text-[11px] font-medium text-muted">AI crawlers</div>
+            <div className="section-title mb-1">AI crawlers</div>
             <RankList rows={t.aiCrawlers.map((c) => ({ key: c.name, label: c.name, count: c.count }))} max={8} />
           </div>
         )}
       </Card>
 
-      <Card title="Top IPs" icon={<Users size={14} />}>
+      <Card title="Top IPs" icon={<Users size={13} />}>
         <RankList
           mono
           rows={t.topIps.map((x) => {
@@ -206,11 +204,11 @@ function TrafficPanels({ t, serverName }: { t: Traffic; serverName: string }) {
         />
       </Card>
 
-      <Card title="Top paths" icon={<FileText size={14} />}>
+      <Card title="Top paths" icon={<FileText size={13} />}>
         <RankList mono rows={t.topPaths.map((x) => ({ key: x.path, label: x.path, count: x.count }))} />
       </Card>
 
-      <Card title="Top user agents" icon={<Bot size={14} />} className="@4xl:col-span-2">
+      <Card title="Top user agents" icon={<Bot size={13} />} className="@4xl:col-span-2">
         <RankList
           max={12}
           rows={t.topAgents.map((x) => {
@@ -232,7 +230,7 @@ function LiveConnections({ snap }: { snap: Snapshot }) {
   const c = snap.connections;
   if (!c) return null;
   return (
-    <Card title="Live connections" icon={<Network size={14} />}>
+    <Card title="Live connections" icon={<Network size={13} />}>
       <div className="flex flex-wrap items-start gap-6">
         <Stat label="Established now" value={c.established} sub={`at ${new Date(snap.at).toLocaleTimeString()}`} />
         <div className="min-w-[240px] flex-1">

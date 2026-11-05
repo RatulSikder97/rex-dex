@@ -5,6 +5,7 @@ import { api, timeAgo } from "@/lib/client";
 import { STAGES, type Run } from "@/lib/types";
 import { DeptIcon } from "@/components/icons";
 import { EmptyState, Skeleton } from "@/components/ui/empty";
+import { ErrorState, PageHeader, Pill } from "@/components/ui/kit";
 import { stageColor } from "@/components/workbench/SideBar";
 import { newProjectFlow, openFolderFlow, showActivity, switchProject } from "@/components/workbench/actions";
 import { useAgents, useDepartments, useWorkbench } from "@/store/workbench";
@@ -48,43 +49,39 @@ export default function Dashboard() {
   const def = defaultAgent();
 
   return (
-    <div className="@container h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl space-y-5 p-4 @3xl:p-6">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">Command Center</h1>
-            <p className="text-muted">You are the CEO. Every department is an AI agent. Plan → build → ship → grow.</p>
-          </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => delegate({ department: "ceo", brief: "Build my operating plan for this week across all departments. Force-rank the top 5 outcomes, then list the tasks per department." })}
-          >
-            <Rocket size={13} /> Plan my week
-          </button>
-        </header>
+    <div className="page @container">
+      <div className="page-inner space-y-4">
+        <PageHeader
+          title="Command center"
+          description="Every department is an agent. Plan the work, then hand it off."
+          actions={
+            <button
+              className="btn btn-primary"
+              onClick={() => delegate({ department: "ceo", brief: "Build my operating plan for this week across all departments. Force-rank the top 5 outcomes, then list the tasks per department." })}
+            >
+              <Rocket size={13} /> Plan my week
+            </button>
+          }
+        />
 
         {failed && (
-          <div className="rounded border border-err/40 bg-err/10 px-3 py-2 text-[12.5px] text-err">
-            Couldn’t load dashboard stats.{" "}
-            <button className="underline" onClick={() => useWorkbench.getState().bump()}>
-              Retry
-            </button>
+          <div className="card">
+            <ErrorState compact title="Couldn’t load dashboard numbers" error="Check that REX is still running, then retry." onRetry={() => useWorkbench.getState().bump()} />
           </div>
         )}
 
-        <section className="grid grid-cols-2 gap-3 @lg:grid-cols-3 @3xl:grid-cols-5" aria-label="Key numbers">
+        <section className="grid grid-cols-2 gap-2 @lg:grid-cols-3 @3xl:grid-cols-5" aria-label="Key numbers">
           {cards.map((c) => (
-            <button key={c.label} className="card group p-4 text-left transition-colors hover:border-[color-mix(in_srgb,var(--accent)_50%,var(--border))] hover:bg-hover/40" onClick={c.onClick} title={c.hint}>
-              <div className="text-[11px] text-muted">{c.label}</div>
-              {c.value === undefined ? <Skeleton className="mt-2 h-7 w-12" /> : <div className="mt-1 text-2xl font-semibold tabular-nums">{c.value}</div>}
-              <div className="mt-1 text-[10.5px] text-faint opacity-0 transition-opacity group-hover:opacity-100">{c.hint} →</div>
+            <button key={c.label} className="card px-3 py-2.5 text-left transition-colors hover:bg-hover" onClick={c.onClick} title={c.hint}>
+              <div className="truncate text-[11px] text-muted">{c.label}</div>
+              {c.value === undefined ? <Skeleton className="mt-1.5 h-[22px] w-10" /> : <div className="mt-1 h-[26px] text-[20px] font-semibold leading-[26px] tabular-nums">{c.value}</div>}
             </button>
           ))}
         </section>
 
         <section className="grid grid-cols-1 gap-4 @4xl:grid-cols-3">
-          <div className="card @container/pipe p-4 @4xl:col-span-2">
-            <div className="section-title mb-3">Pipeline</div>
+          <div className="card @container/pipe p-3 @4xl:col-span-2">
+            <div className="section-title mb-2">Pipeline</div>
             {!projectsLoaded ? (
               <Skeleton className="h-28 w-full" />
             ) : projects.length ? (
@@ -92,14 +89,14 @@ export default function Dashboard() {
                 {STAGES.map((stage) => {
                   const inStage = projects.filter((p) => p.stage === stage);
                   return (
-                    <div key={stage} className="min-h-20 rounded border border-line bg-editor p-2">
-                      <div className="mb-2 flex items-center gap-1.5 text-[11px] text-muted">
-                        <span className="h-2 w-2 rounded-full" style={{ background: stageColor(stage) }} /> {stage}
-                        <span className="ml-auto text-faint">{inStage.length || ""}</span>
+                    <div key={stage} className="min-h-20 rounded-[4px] border border-line bg-editor p-1.5">
+                      <div className="mb-1.5 flex items-center gap-1.5 px-0.5 text-[11px] capitalize text-muted">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: stageColor(stage) }} aria-hidden /> <span className="truncate">{stage}</span>
+                        {inStage.length > 0 && <span className="count ml-auto">{inStage.length}</span>}
                       </div>
                       <div className="space-y-1">
                         {inStage.map((p) => (
-                          <button key={p.id} title={`Open ${p.name} board`} className="w-full truncate rounded bg-elev px-2 py-1 text-left text-[12px] hover:bg-hover" onClick={() => switchProject(p.id)}>
+                          <button key={p.id} title={`Open ${p.name} board`} className="block h-6 w-full truncate rounded-[4px] bg-elev px-2 text-left text-[12px] hover:bg-hover" onClick={() => switchProject(p.id)}>
                             {p.name}
                           </button>
                         ))}
@@ -113,10 +110,10 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
+          <div className="card p-3">
+            <div className="mb-2 flex h-6 items-center justify-between">
               <span className="section-title">Agents</span>
-              <button className="flex items-center gap-1 text-[11.5px] text-accent hover:underline" onClick={() => openSettings("settings-agents")}>
+              <button className="btn btn-ghost btn-sm" onClick={() => openSettings("settings-agents")}>
                 <Settings2 size={12} /> Manage
               </button>
             </div>
@@ -126,20 +123,20 @@ export default function Dashboard() {
                 <Skeleton className="h-5 w-3/4" />
               </div>
             ) : (
-              <ul className="space-y-1.5">
+              <ul>
                 {agents.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 text-[12.5px]" title={a.detail}>
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${a.available ? "bg-ok" : "bg-err"}`} aria-label={a.available ? "Available" : "Unavailable"} />
+                  <li key={a.id} className="flex h-6 items-center gap-2 text-[12.5px]" title={a.detail}>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${a.available ? "bg-ok" : "bg-err"}`} role="img" aria-label={a.available ? "Available" : "Unavailable"} />
                     <DeptIcon name={a.icon || "Terminal"} size={13} />
                     <span className="min-w-0 flex-1 truncate">{a.label}</span>
-                    {a.id === def && <span className="shrink-0 rounded bg-active px-1.5 text-[10px] text-fg">default</span>}
-                    <span className="min-w-0 max-w-[40%] truncate text-[11px] text-faint">{a.available ? a.detail || "ready" : "not installed"}</span>
+                    {a.id === def && <Pill className="shrink-0">Default</Pill>}
+                    <span className="min-w-0 max-w-[40%] truncate text-[11px] text-faint">{a.available ? a.detail || "Ready" : "Not installed"}</span>
                   </li>
                 ))}
               </ul>
             )}
             {!!agents.length && !agents.some((a) => a.available) && (
-              <button className="btn mt-3 w-full justify-center" onClick={() => openSettings("settings-agents")}>
+              <button className="btn btn-sm mt-2 w-full" onClick={() => openSettings("settings-agents")}>
                 <Terminal size={13} /> Set up {label(def)}
               </button>
             )}
@@ -147,24 +144,24 @@ export default function Dashboard() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 @4xl:grid-cols-3">
-          <div className="card @container/dept p-4 @4xl:col-span-2">
-            <div className="section-title mb-3">Departments</div>
-            <div className="grid grid-cols-1 gap-2 @md/dept:grid-cols-2 @3xl/dept:grid-cols-3">
+          <div className="card @container/dept p-3 @4xl:col-span-2">
+            <div className="section-title mb-2">Departments</div>
+            <div className="grid grid-cols-1 gap-1.5 @md/dept:grid-cols-2 @3xl/dept:grid-cols-3">
               {departments.map((d) => {
                 const n = stats?.openByDept.find((x) => x.department === d.id)?.n ?? 0;
                 return (
-                  <button key={d.id} title={`Ask ${d.name}: ${d.role}`} className="flex items-start gap-2.5 rounded border border-line bg-editor p-2.5 text-left hover:bg-hover" onClick={() => delegate({ department: d.id, brief: "" })}>
+                  <button key={d.id} title={`Ask ${d.name}: ${d.role}`} className="flex items-start gap-2.5 rounded-[4px] border border-line bg-editor p-2 text-left hover:bg-hover" onClick={() => delegate({ department: d.id, brief: "" })}>
                     <span className="mt-0.5">
                       <DeptIcon name={d.icon} color={d.color} size={15} />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-[12.5px] font-medium">
                         <span className="truncate">{d.name}</span>
-                        {n > 0 && <span className="ml-auto shrink-0 text-[10.5px] tabular-nums text-faint">{n} open</span>}
+                        {n > 0 && <span className="ml-auto shrink-0 text-[11px] tabular-nums text-faint">{n} open</span>}
                       </div>
                       <div className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-muted">{d.role}</div>
-                      <div className="mt-1.5 h-1 rounded bg-side">
-                        <div className="h-full rounded" style={{ width: `${(n / maxDept) * 100}%`, background: d.color }} />
+                      <div className="mt-1.5 h-1 rounded-[2px] bg-side" aria-hidden>
+                        <div className="h-full rounded-[2px]" style={{ width: `${(n / maxDept) * 100}%`, background: d.color }} />
                       </div>
                     </div>
                   </button>
@@ -172,21 +169,21 @@ export default function Dashboard() {
               })}
             </div>
           </div>
-          <div className="card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="section-title">Recent agent activity</span>
-              <button className="text-[11.5px] text-accent hover:underline" onClick={() => showActivity("runs")}>
+          <div className="card p-3">
+            <div className="mb-2 flex h-6 items-center justify-between">
+              <span className="section-title">Recent activity</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => showActivity("runs")}>
                 All runs
               </button>
             </div>
-            <div className="space-y-0.5">
-              {loading &&
-                Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="my-1 h-5 w-full" />)}
+            <div className="-mx-1.5">
+              {loading && Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="mx-1.5 my-1 h-5" />)}
+              {failed && !stats && <p className="px-1.5 py-2 text-[12px] text-muted">Activity is unavailable until the numbers load.</p>}
               {stats?.recentRuns.map((r) => {
                 const d = getDepartment(r.department);
                 return (
-                  <button key={r.id} title={`${r.brief}\n${label(r.provider)} · ${r.status}`} className="flex w-full items-center gap-2 rounded px-1 py-1 text-left hover:bg-hover" onClick={() => openTab({ kind: "run", id: r.id }, `Run · ${d.name}`)}>
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${r.status === "running" ? "animate-pulse bg-accent" : r.status === "done" ? "bg-ok" : r.status === "cancelled" ? "bg-faint" : "bg-err"}`} />
+                  <button key={r.id} title={`${r.brief}\n${label(r.provider)} · ${r.status}`} className="flex h-7 w-full items-center gap-2 rounded-[4px] px-1.5 text-left hover:bg-hover" onClick={() => openTab({ kind: "run", id: r.id }, `Run · ${d.name}`)}>
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${r.status === "running" ? "bg-accent" : r.status === "done" ? "bg-ok" : r.status === "cancelled" ? "bg-faint" : "bg-err"}`} role="img" aria-label={r.status} />
                     <DeptIcon name={d.icon} color={d.color} size={13} />
                     <span className="truncate text-[12.5px]">{r.brief}</span>
                     <span className="ml-auto shrink-0 text-[11px] text-faint">{timeAgo(r.created_at)}</span>

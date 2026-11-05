@@ -81,7 +81,7 @@ export default function TitleBar() {
 
   const toggle = (on: boolean, Icon: typeof PanelLeft, label: string, id: string, run: () => void, badge?: number) => (
     <button
-      className={`icon-btn relative !h-[22px] !w-[26px] ${on ? "!text-fg bg-hover/60" : ""}`}
+      className={`icon-btn relative bg-transparent hover:bg-hover ${on ? "text-fg" : "text-faint"}`}
       aria-pressed={on}
       aria-label={label}
       title={withShortcut(label, id)}
@@ -111,29 +111,30 @@ export default function TitleBar() {
         {desk?.platform !== "darwin" && <span className="mx-0.5 h-4 w-px shrink-0 bg-line" aria-hidden />}
         <button
           ref={btn}
-          className="flex h-[24px] min-w-0 max-w-[260px] items-center gap-1.5 rounded px-2 text-[12.5px] hover:bg-hover"
+          className="flex h-[24px] min-w-0 max-w-[260px] items-center gap-1.5 rounded-[4px] px-1.5 text-[12.5px] hover:bg-hover aria-expanded:bg-hover"
           aria-haspopup="menu"
           aria-expanded={!!menu}
           aria-label="Switch project"
-          title="Switch project"
+          title={project ? `${project.name} · ${project.stage} (switch project)` : "Switch project"}
           onClick={() => (menu ? setMenu(null) : openMenu())}
         >
           {project && <ProjectAvatar project={project} size={17} />}
           <span className="truncate">{project ? project.name : "No project"}</span>
-          {project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: stageColor(project.stage) }} title={project.stage} />}
+          {project && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: stageColor(project.stage) }} aria-hidden />}
           <ChevronDown size={13} className="text-faint" />
         </button>
       </div>
 
       <div className="flex min-w-[120px] flex-1 justify-center" onDoubleClick={(e) => e.target === e.currentTarget && setPalette(true)}>
       <button
-        className="flex h-[24px] w-full max-w-[520px] items-center gap-2 rounded-md border border-line bg-input px-2.5 text-[12px] text-muted hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] hover:text-fg"
+        className="flex h-[24px] w-full min-w-0 max-w-[520px] items-center gap-2 rounded-[6px] border border-line bg-input px-2 text-[12px] text-muted hover:border-[color-mix(in_srgb,var(--fg-faint)_55%,var(--border))] hover:text-fg"
         onClick={() => setPalette(true, "commands")}
         aria-label="Search files, commands, agents"
+        title={`Search files, commands, agents (${kbd("⌘K")})`}
       >
-        <Search size={13} />
+        <Search size={13} className="shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate text-left">Search files, commands, agents…</span>
-        <span className="kbd hidden sm:inline">{kbd("⌘K")}</span>
+        <span className="kbd hidden shrink-0 sm:inline">{kbd("⌘K")}</span>
       </button>
       </div>
 
@@ -159,18 +160,32 @@ function LayoutModeToggle() {
   const setMode = useWorkbench((s) => s.setLayoutMode);
   const opt = (m: "mission" | "code", Icon: typeof Code2, label: string, hint: string) => (
     <button
+      type="button"
       role="radio"
       aria-checked={mode === m}
+      tabIndex={mode === m ? 0 : -1}
+      aria-label={`${label} mode`}
       title={`${hint} (${shortcut("layoutMode") || kbd("⌘⇧M")} toggles)`}
-      className={`flex h-[20px] items-center gap-1 rounded-[5px] px-2 text-[11.5px] transition-colors ${mode === m ? "bg-elev font-medium text-fg shadow-[0_0_0_1px_var(--border)]" : "text-muted hover:text-fg"}`}
+      className="!h-[18px] !px-1.5"
       onClick={() => setMode(m)}
     >
-      <Icon size={13} strokeWidth={1.8} className={mode === m ? "text-accent" : ""} />
+      <Icon size={13} strokeWidth={1.8} className={mode === m ? "text-accent" : ""} aria-hidden />
       <span className="hidden md:inline">{label}</span>
     </button>
   );
   return (
-    <div role="radiogroup" aria-label="Layout mode" className="mr-1.5 flex items-center gap-0.5 rounded-md border border-line bg-input p-[2px]">
+    <div
+      role="radiogroup"
+      aria-label="Layout mode"
+      className="seg mr-1.5"
+      onKeyDown={(e) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        e.preventDefault();
+        const group = e.currentTarget;
+        setMode(mode === "mission" ? "code" : "mission");
+        requestAnimationFrame(() => group.querySelector<HTMLElement>(`[aria-checked="true"]`)?.focus());
+      }}
+    >
       {opt("mission", LayoutPanelLeft, "Mission", "Mission mode: tasks, pipeline, output and issues")}
       {opt("code", Code2, "Code", "Code mode: the full IDE")}
     </div>

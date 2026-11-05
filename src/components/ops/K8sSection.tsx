@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useState } from "react";
-import { AlertTriangle, Box, Layers, Network, RotateCw, Scaling, ScrollText, Ship } from "lucide-react";
+import { AlertTriangle, Box, Layers, Network, RotateCw, Scaling, ScrollText } from "lucide-react";
 import { api } from "@/lib/client";
 import type { K8sInfo } from "@/lib/opsTypes";
 import { EmptyState } from "@/components/ui/empty";
@@ -69,7 +69,7 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
 
   const loadLogs = useCallback(async () => (logsFor ? (await call("pod", logsFor, "logs")).output ?? "" : ""), [call, logsFor]);
 
-  if (!data && error) return <ErrorBox title="Couldn't load Kubernetes">{error}</ErrorBox>;
+  if (!data && error) return <ErrorBox title="Couldn't load Kubernetes" error={error} onRetry={() => void reload()} />;
   if (!data) return <LoadingGrid n={3} />;
 
   const warnings = data.events.filter((e) => e.type !== "Normal");
@@ -80,7 +80,7 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-[12px] text-muted">
             Context
-            <select className="input h-7 w-56" value={context} onChange={(e) => setSel({ context: e.target.value, namespace: "" })} aria-label="Kubernetes context">
+            <select className="input input-sm w-52" value={context} onChange={(e) => setSel({ context: e.target.value, namespace: "" })} aria-label="Kubernetes context">
               {!data.contexts.length && <option value="">(none)</option>}
               {data.contexts.map((c) => (
                 <option key={c} value={c}>
@@ -91,7 +91,7 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
           </label>
           <label className="flex items-center gap-2 text-[12px] text-muted">
             Namespace
-            <select className="input h-7 w-44" value={namespace} onChange={(e) => setSel((s) => ({ context: s.context || context, namespace: e.target.value }))} aria-label="Namespace" disabled={!data.namespaces.length}>
+            <select className="input input-sm w-40" value={namespace} onChange={(e) => setSel((s) => ({ context: s.context || context, namespace: e.target.value }))} aria-label="Namespace" disabled={!data.namespaces.length}>
               {!data.namespaces.includes(namespace) && <option value={namespace}>{namespace}</option>}
               {data.namespaces.map((n) => (
                 <option key={n} value={n}>
@@ -105,17 +105,14 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
       )}
 
       {!data.available && (
-        <ErrorBox title={data.contexts.length ? "Cluster unreachable" : "kubectl isn't available"}>
-          {data.error ?? "No kubeconfig context is configured."}
-          <div className="mt-1.5 text-[12px]">
-            Install kubectl (<code className="font-mono">brew install kubectl</code>) and point it at a cluster (<code className="font-mono">~/.kube/config</code>). For local clusters try Docker Desktop&apos;s Kubernetes, kind or minikube.
-          </div>
+        <ErrorBox tone={data.contexts.length ? "err" : "warn"} title={data.contexts.length ? "Cluster unreachable" : "Kubernetes isn't set up"} error={data.error ?? "No Kubernetes context in your kubeconfig"} onRetry={() => void reload()}>
+          {!data.contexts.length && "For a local cluster, turn on Kubernetes in Docker Desktop, or use kind or minikube."}
         </ErrorBox>
       )}
 
       {data.available && (
         <>
-          <Card title={`Pods · ${data.pods.filter((p) => p.phase === "Running").length}/${data.pods.length} running`} icon={<Box size={14} />}>
+          <Card title="Pods" icon={<Box size={13} />} action={<Pill tone="muted">{data.pods.filter((p) => p.phase === "Running").length}/{data.pods.length} running</Pill>} flush={!!data.pods.length}>
             {data.pods.length ? (
               <Table label="Pods" head={["Name", "Phase", "Ready", "Restarts", "Age", "Node", ""]}>
                 {data.pods.map((p) => (
@@ -129,7 +126,9 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
                     <td className="tabular-nums">{p.ready}</td>
                     <td className={`tabular-nums ${p.restarts > 5 ? "font-semibold text-err" : p.restarts > 0 ? "font-medium text-warn" : "text-muted"}`}>{p.restarts}</td>
                     <td className="text-muted">{p.age}</td>
-                    <td className="max-w-[160px] truncate text-muted">{p.node}</td>
+                    <td className="max-w-[160px] truncate text-muted" title={p.node}>
+                      {p.node}
+                    </td>
                     <td>
                       <button className="icon-btn" onClick={() => setLogsFor(p.name)} aria-label={`Logs for ${p.name}`} title="Logs">
                         <ScrollText size={13} />
@@ -143,12 +142,14 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
             )}
           </Card>
 
-          <Card title={`Deployments · ${data.deployments.length}`} icon={<Layers size={14} />}>
+          <Card title="Deployments" icon={<Layers size={13} />} action={<span className="count">{data.deployments.length}</span>} flush={!!data.deployments.length}>
             {data.deployments.length ? (
               <Table label="Deployments" head={["Name", "Ready", "Available", ""]}>
                 {data.deployments.map((d) => (
                   <tr key={d.name}>
-                    <td className="font-medium">{d.name}</td>
+                    <td className="max-w-[240px] truncate font-medium" title={d.name}>
+                      {d.name}
+                    </td>
                     <td>
                       <Pill tone={d.ready >= d.desired ? (d.desired ? "ok" : "muted") : d.ready ? "warn" : "err"}>
                         {d.ready}/{d.desired}
@@ -157,10 +158,10 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
                     <td className="tabular-nums text-muted">{d.available}</td>
                     <td>
                       <div className="flex justify-end gap-1">
-                        <button className="btn h-6" disabled={!!busy} onClick={() => void scale(d.name, d.desired)}>
+                        <button className="btn btn-sm" disabled={!!busy} onClick={() => void scale(d.name, d.desired)}>
                           {busy === `${d.name}:scale` ? <Spinner /> : <Scaling size={12} />} Scale
                         </button>
-                        <button className="btn h-6" disabled={!!busy} onClick={() => void restart(d.name)}>
+                        <button className="btn btn-sm" disabled={!!busy} onClick={() => void restart(d.name)}>
                           {busy === `${d.name}:restart` ? <Spinner /> : <RotateCw size={12} />} Rollout restart
                         </button>
                       </div>
@@ -169,12 +170,12 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
                 ))}
               </Table>
             ) : (
-              <p className="text-[12px] text-muted">No deployments.</p>
+              <p className="text-[12px] text-muted">No deployments in {namespace}.</p>
             )}
           </Card>
 
           <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-2">
-            <Card title={`Services · ${data.services.length}`} icon={<Network size={14} />}>
+            <Card title="Services" icon={<Network size={13} />} action={<span className="count">{data.services.length}</span>}>
               {data.services.length ? (
                 <ul className="space-y-1 text-[12px]">
                   {data.services.map((s) => (
@@ -187,17 +188,19 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-[12px] text-muted">No services.</p>
+                <p className="text-[12px] text-muted">No services in {namespace}.</p>
               )}
             </Card>
-            <Card title={`Warning events · ${warnings.length}`} icon={<AlertTriangle size={14} />}>
+            <Card title="Warning events" icon={<AlertTriangle size={13} />} action={<span className="count">{warnings.length}</span>}>
               {warnings.length ? (
                 <ul className="max-h-80 space-y-2 overflow-y-auto text-[12px]">
                   {warnings.slice(0, 30).map((e, i) => (
                     <li key={i}>
                       <div className="flex items-center gap-2">
                         <Pill tone="warn">{e.reason}</Pill>
-                        <span className="min-w-0 flex-1 truncate font-mono text-[11px]">{e.object}</span>
+                        <span className="min-w-0 flex-1 truncate font-mono text-[11px]" title={e.object}>
+                          {e.object}
+                        </span>
                         <span className="shrink-0 text-[11px] text-faint">{e.age}</span>
                       </div>
                       <p className="mt-0.5 break-words text-muted">{e.message}</p>
@@ -205,13 +208,12 @@ export default function K8sSection({ nav }: { nav: OpsNav }) {
                   ))}
                 </ul>
               ) : (
-                <p className="text-[12px] text-muted">No warnings. </p>
+                <p className="text-[12px] text-muted">No warnings.</p>
               )}
             </Card>
           </div>
         </>
       )}
-      {!data.available && !data.contexts.length && <EmptyState compact icon={Ship} title="No cluster yet" hint="Once kubectl has a context, pods, deployments, services and events show up here." />}
 
       {logsFor && <LogsDrawer title={`Logs · ${logsFor}`} load={loadLogs} onClose={() => setLogsFor(null)} />}
     </div>

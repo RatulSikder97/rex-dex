@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, ChevronRight, LayoutDashboard, X, XSquare } from "lucide-react";
+import { ChevronRight, LayoutDashboard, X, XSquare } from "lucide-react";
 import { useWorkbench, type Tab } from "@/store/workbench";
 import { Menu } from "@/components/ui/menu";
 import Dashboard from "@/components/views/Dashboard";
@@ -90,14 +90,16 @@ function Breadcrumbs({ tab }: { tab: Tab }) {
   const project = projects.find((p) => p.id === s.projectId);
   const parts = s.path.split("/").filter(Boolean);
   return (
-    <nav aria-label="Breadcrumbs" className="flex h-[22px] shrink-0 items-center gap-0.5 overflow-hidden border-b border-line bg-editor px-3 text-[11.5px] text-muted">
-      <button className="shrink-0 truncate rounded px-1 hover:bg-hover hover:text-fg" onClick={() => openProjectSettings(s.projectId)} title="Project settings">
+    <nav aria-label="Breadcrumbs" className="flex h-[22px] shrink-0 items-center gap-0.5 overflow-hidden bg-editor px-2 text-[12px] text-muted">
+      <button className="max-w-[40%] shrink-0 truncate rounded-[4px] px-1 hover:bg-hover hover:text-fg" onClick={() => openProjectSettings(s.projectId)} title={`${project?.name ?? "Project"} · project settings`}>
         {project?.name ?? "project"}
       </button>
       {parts.map((p, i) => (
         <span key={i} className="flex min-w-0 items-center gap-0.5">
-          <ChevronRight size={12} className="shrink-0 text-faint" />
-          <span className={`truncate px-1 ${i === parts.length - 1 ? "text-fg" : ""}`}>{p}</span>
+          <ChevronRight size={12} className="shrink-0 text-faint" aria-hidden />
+          <span className={`truncate px-0.5 ${i === parts.length - 1 ? "text-fg" : ""}`} title={parts.slice(0, i + 1).join("/")} aria-current={i === parts.length - 1 ? "location" : undefined}>
+            {p}
+          </span>
         </span>
       ))}
       {s.kind === "diff" && <span className="ml-1 shrink-0 text-faint">({s.staged ? "staged" : "working tree"})</span>}
@@ -140,7 +142,9 @@ export default function EditorArea() {
 
   return (
     <div className="flex h-full flex-col bg-editor">
-      <div className="flex h-9 shrink-0 border-b border-line bg-side">
+      {/* VS Code tab strip: inactive tabs and the empty filler carry the bottom border; the active tab doesn't, so it joins the editor. */}
+      {tabs.length > 0 && (
+      <div className="flex h-[35px] shrink-0 bg-side">
       <div ref={strip} role="tablist" aria-label="Open editors" className="tab-strip flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden">
         {tabs.map((t, i) => {
           const isActive = t.id === activeTabId;
@@ -171,25 +175,27 @@ export default function EditorArea() {
                   setMenu({ x: r.left, y: r.bottom, id: t.id });
                 }
               }}
-              className={`group flex max-w-56 shrink-0 cursor-pointer items-center gap-1.5 border-r border-line pl-2.5 pr-1 text-[12.5px] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] ${
-                isActive ? "bg-editor text-fg shadow-[inset_0_2px_0_var(--accent)]" : "text-muted hover:bg-hover"
+              className={`group relative flex min-w-[80px] max-w-56 shrink-0 items-center gap-1.5 border-r border-line pl-3 pr-1 text-[13px] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] ${
+                isActive ? "bg-editor text-fg" : "border-b text-muted hover:bg-[color-mix(in_srgb,var(--bg-hover)_50%,var(--bg-side))] hover:text-fg"
               }`}
             >
-              <Icon size={13} className={isActive ? "text-accent" : "text-faint"} aria-hidden />
-              <span className={`truncate ${t.dirty ? "italic" : ""}`}>{t.title}</span>
+              {isActive && <span className="absolute inset-x-0 top-0 h-px bg-accent" aria-hidden />}
+              <Icon size={14} className={`shrink-0 ${isActive ? "text-accent" : "text-faint"}`} aria-hidden />
+              <span className="min-w-0 flex-1 truncate">{t.title}</span>
+              {t.dirty && <span className="sr-only">, unsaved changes</span>}
               {closeButton === "off" ? (
-                <span className="flex h-5 w-3 items-center justify-center" aria-hidden>
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
                   {t.dirty && <span className="h-2 w-2 rounded-full bg-fg" />}
                 </span>
               ) : (
               <button
                 tabIndex={-1}
-                className={`icon-btn h-5 w-5 ${t.dirty || isActive || closeButton === "always" ? "" : "opacity-0 group-hover:opacity-100"}`}
+                className={`icon-btn !h-5 !w-5 ${t.dirty || isActive || closeButton === "always" ? "" : "opacity-0 focus-visible:opacity-100 group-hover:opacity-100"}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   void closeTab(t.id);
                 }}
-                title={`Close (${kbd("⌘W")})`}
+                title={t.dirty ? `Unsaved changes. Close (${kbd("⌘W")})` : `Close (${kbd("⌘W")})`}
                 aria-label={`Close ${t.title}`}
               >
                 {t.dirty ? <span className="h-2 w-2 rounded-full bg-fg group-hover:hidden" /> : null}
@@ -199,14 +205,17 @@ export default function EditorArea() {
             </div>
           );
         })}
-        <div className="flex-1" onDoubleClick={() => openTab({ kind: "dashboard" }, "Command Center")} />
+        <div className="min-w-4 flex-1 border-b border-line" onDoubleClick={() => openTab({ kind: "dashboard" }, "Command Center")} />
       </div>
-        {tabs.length > 1 && (
-          <button className="icon-btn my-auto mx-1 shrink-0" title="Close all tabs" aria-label="Close all tabs" onClick={() => void closeAll()}>
-            <XSquare size={14} />
-          </button>
-        )}
+        <div className="flex shrink-0 items-center border-b border-line px-1">
+          {tabs.length > 1 && (
+            <button className="icon-btn" title="Close all editors" aria-label="Close all editors" onClick={() => void closeAll()}>
+              <XSquare size={14} />
+            </button>
+          )}
+        </div>
       </div>
+      )}
       {active && <Breadcrumbs tab={active} />}
       <div data-editor-body className="min-h-0 flex-1 overflow-hidden">
         {active ? (
@@ -215,29 +224,39 @@ export default function EditorArea() {
             <View tab={active} />
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-muted">
-            <div className="text-5xl font-black tracking-tight text-faint/60">REX</div>
-            <div className="grid grid-cols-[auto_auto] gap-x-4 gap-y-1.5 text-[12px]">
-              {[
-                ["Command palette", shortcut("palette")],
-                ["Go to file", shortcut("quickOpen")],
-                ["Toggle agent panel", shortcut("agent")],
-                ["Toggle bottom panel", shortcut("panel")],
-              ].map(([l, k]) => (
-                <span key={l} className="contents">
-                  <span className="text-right">{l}</span>
-                  <span>
-                    <span className="kbd">{k}</span>
-                  </span>
-                </span>
-              ))}
+          // Empty editor group: a quiet VS Code-style watermark (mark + shortcut hints), no call-to-action hero.
+          <div className="flex h-full select-none flex-col items-center justify-center gap-6 px-6" onDoubleClick={() => openTab({ kind: "dashboard" }, "Command Center")}>
+            <div aria-hidden className="text-[72px] font-black leading-none tracking-[-0.04em] text-[color-mix(in_srgb,var(--fg-faint)_22%,var(--bg-editor))]">
+              REX
             </div>
-            <div className="mt-2 flex gap-2">
-              <button className="btn" onClick={() => openTab({ kind: "dashboard" }, "Command Center")}>
-                <LayoutDashboard size={13} /> Command Center
+            <dl className="grid grid-cols-[minmax(0,auto)_auto] items-center gap-x-4 gap-y-2.5 text-[12.5px]">
+              {[
+                ["Show all commands", shortcut("palette")],
+                ["Go to file", shortcut("quickOpen")],
+                ["Find in files", shortcut("search")],
+                ["Toggle terminal", shortcut("terminal")],
+                ["Toggle agent panel", shortcut("agent")],
+              ]
+                .filter(([, k]) => k)
+                .map(([l, k]) => (
+                  <div key={l} className="contents">
+                    <dt className="truncate text-right text-muted">{l}</dt>
+                    <dd className="flex gap-1">
+                      {k.split(" ").map((c) => (
+                        <span key={c} className="kbd">
+                          {c}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                ))}
+            </dl>
+            <div className="flex gap-4 text-[12px]">
+              <button className="text-accent hover:underline" onClick={() => openTab({ kind: "welcome" }, "Welcome")}>
+                Open welcome
               </button>
-              <button className="btn" onClick={() => openTab({ kind: "welcome" }, "Welcome")}>
-                <BookOpen size={13} /> Welcome
+              <button className="text-accent hover:underline" onClick={() => openTab({ kind: "dashboard" }, "Command Center")}>
+                Open command center
               </button>
             </div>
           </div>
@@ -251,10 +270,10 @@ export default function EditorArea() {
           onClose={() => setMenu(null)}
           items={[
             { label: "Close", hint: kbd("⌘W"), onSelect: () => void closeTab(menu.id) },
-            { label: "Close Others", disabled: tabs.length < 2, onSelect: () => void closeOthers(menu.id) },
-            { label: "Close to the Right", disabled: menuTab < 0 || menuTab >= tabs.length - 1, onSelect: () => void closeToTheRight(menu.id) },
+            { label: "Close others", disabled: tabs.length < 2, onSelect: () => void closeOthers(menu.id) },
+            { label: "Close to the right", disabled: menuTab < 0 || menuTab >= tabs.length - 1, onSelect: () => void closeToTheRight(menu.id) },
             { type: "separator" },
-            { label: "Close All", onSelect: () => void closeAll() },
+            { label: "Close all", onSelect: () => void closeAll() },
           ]}
         />
       )}

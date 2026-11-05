@@ -11,7 +11,14 @@ import { registerEditor } from "@/components/workbench/editorRegistry";
 import { kbd } from "@/components/workbench/shortcuts";
 import { useEditorOptions } from "@/components/views/editorOptions";
 
-const Monaco = dynamic(() => import("@monaco-editor/react").then((m) => m.default), { ssr: false, loading: () => <div className="p-4 text-muted">Loading editor…</div> });
+const Monaco = dynamic(() => import("@monaco-editor/react").then((m) => m.default), { ssr: false, loading: () => (
+    <div className="space-y-1.5 p-4" aria-busy="true" aria-label="Loading editor">
+      {[60, 44, 52, 38].map((w, i) => (
+        <div key={i} className="skeleton h-4" style={{ width: `${w}%` }} />
+      ))}
+    </div>
+  ),
+});
 
 const MODEL_PATH = "rex://settings/settings.json";
 
@@ -126,13 +133,14 @@ export default function SettingsJsonView({ tabId }: { tabId: string }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-8 shrink-0 items-center gap-2 border-b border-line px-3 text-[12px] text-muted">
-        <span className="truncate">User settings · only values that differ from the defaults are stored</span>
-        <div className="flex-1" />
-        <button className="btn btn-ghost" onClick={() => openSettings()}>
-          <Settings size={13} /> Open Settings UI
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-line px-3 text-[12px] text-muted">
+        <span className="min-w-0 flex-1 truncate" title="User settings. Only values that differ from the defaults are stored.">
+          User settings · only values that differ from the defaults are stored
+        </span>
+        <button className="btn btn-ghost btn-sm shrink-0" onClick={() => openSettings()}>
+          <Settings size={13} /> Open settings editor
         </button>
-        <button className="btn" onClick={() => saveRef.current()}>
+        <button className="btn btn-sm shrink-0" onClick={() => saveRef.current()}>
           <Save size={13} /> Save <span className="kbd">{kbd("⌘S")}</span>
         </button>
       </div>

@@ -28,17 +28,18 @@ extraResources:
   - from: desktop/stage/server
     to: server
     filter: ["**/*"]
+  # electron-builder drops node_modules from file sets unless it is the `from` root itself.
+  - from: desktop/stage/server/node_modules
+    to: server/node_modules
+    filter: ["**/*"]
 
 afterSign: desktop/scripts/after-sign.cjs
 
 mac:
   category: public.app-category.developer-tools
   icon: desktop/build/icon.icns
-  target:
-    - target: dmg
-      arch: [arm64, x64]
-    - target: zip
-      arch: [arm64, x64]
+  # Arch comes from the CLI (desktop/scripts/build.mjs): host by default, REX_DESKTOP_ARCH=all → arm64 + x64.
+  target: [dmg, zip]
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: desktop/build/entitlements.mac.plist
@@ -54,9 +55,7 @@ dmg:
 
 win:
   icon: desktop/build/icon.ico
-  target:
-    - target: nsis
-      arch: [x64, arm64]
+  target: [nsis]
 
 nsis:
   oneClick: false
@@ -69,6 +68,4 @@ linux:
   icon: desktop/build/icon.png
   category: Development
   synopsis: One-person company operating system
-  target:
-    - target: AppImage
-      arch: [x64, arm64]
+  target: [AppImage]

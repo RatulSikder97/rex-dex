@@ -7,6 +7,7 @@ import { View } from "@/components/workbench/EditorArea";
 import Sash from "@/components/workbench/Sash";
 import { uiZoom } from "@/components/ui/menu";
 import { ViewErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { PageHeader } from "@/components/ui/kit";
 import { isDialogOpen } from "@/components/ui/dialog";
 import { isTypingTarget } from "@/components/workbench/shortcuts";
 import ExtensionsPanel from "@/components/sidebar/ExtensionsPanel";
@@ -196,9 +197,12 @@ export default function MissionControl() {
           {page === EXTENSIONS_PAGE && (
             <PageFrame title="Extensions" icon={Puzzle} onBack={back} onCode={() => (openInCodeMode(), useWorkbench.setState({ activity: "extensions", sidebarOpen: true }))}>
               <ViewErrorBoundary label="Extensions">
-                <div className="h-full overflow-y-auto">
-                  <div className="mx-auto max-w-3xl py-4">
-                    <ExtensionsPanel />
+                <div className="page">
+                  <div className="page-inner !max-w-3xl">
+                    <PageHeader title="Extensions" description="Add departments, agents, tools, themes and media pipelines." />
+                    <div className="-mx-3">
+                      <ExtensionsPanel />
+                    </div>
                   </div>
                 </div>
               </ViewErrorBoundary>
@@ -221,7 +225,7 @@ export default function MissionControl() {
             </PageFrame>
           )}
 
-          {!wsOpen && <WorkspaceButton onClick={() => setWsOpen(true)} />}
+          {!wsOpen && !page && <WorkspaceButton onClick={() => setWsOpen(true)} />}
 
           {terminal && (
             <div className="relative h-[300px] shrink-0 border-t border-line bg-panel">

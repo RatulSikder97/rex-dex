@@ -1,8 +1,8 @@
 {
   "id": "github-mcp",
-  "name": "GitHub (MCP)",
+  "name": "GitHub",
   "version": "2.0.0",
-  "description": "Gives Engineering, QA and Product GitHub tools (repos, issues, PRs, Actions, code search) through GitHub's official MCP server. Sign in with GitHub in the browser \u2014 no tokens to paste.",
+  "description": "Gives Engineering, QA and Product GitHub tools (repos, issues, PRs, Actions, code search) through GitHub's official tool server. Sign in with GitHub in the browser \u2014 no tokens to paste.",
   "author": "REX",
   "icon": "GitPullRequest",
   "categories": [

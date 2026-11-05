@@ -20,41 +20,41 @@ export default function ActiveSwarms({ projectId }: { projectId: string }) {
       count={live}
       hint="Several departments working on one goal in parallel."
       action={
-        <button className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-muted hover:bg-hover hover:text-fg" onClick={() => openSwarmList()}>
+        <button className="btn btn-ghost btn-sm" onClick={() => openSwarmList()}>
           <Network size={13} /> All swarms
         </button>
       }
     >
       {!list.length ? (
         <button
-          className="flex w-full items-center gap-2 rounded-xl border border-dashed border-line px-4 py-3 text-left text-[12.5px] text-muted hover:border-accent hover:text-fg"
+          className="flex h-9 w-full items-center gap-2 rounded-[6px] border border-dashed border-line px-3 text-left text-[12.5px] text-muted hover:bg-hover hover:text-fg"
           onClick={() => openSwarmList(true)}
         >
-          <Plus size={15} className="text-faint" /> Start a swarm — or click <b className="font-medium text-fg">Swarm</b> on a task below.
+          <Plus size={14} className="text-faint" aria-hidden /> Start a swarm, or click <b className="font-medium text-fg">Swarm</b> on a task below.
         </button>
       ) : (
-        <ul className="space-y-2">
+        <ul className="overflow-hidden rounded-[6px] border border-line bg-side">
           {list.slice(0, 5).map((s) => {
             const { done, total } = progressOf(s);
             const running = s.steps.filter((x) => x.status === "running").length;
             return (
-              <li key={s.id}>
+              <li key={s.id} className="border-b border-line last:border-b-0">
                 <button
-                  className="w-full rounded-xl border border-line bg-elev px-3.5 py-3 text-left transition-colors hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--border))]"
+                  className="w-full px-3 py-2 text-left hover:bg-hover"
                   onClick={() => openSwarm(s)}
                 >
                   <span className="flex items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{s.goal.split("\n").find((l) => l.trim()) ?? "Swarm"}</span>
+                    <span className="min-w-0 flex-1 truncate text-[13px]" title={s.goal}>{s.goal.split("\n").find((l) => l.trim()) ?? "Swarm"}</span>
                     <StatusPill status={s.status} />
                   </span>
-                  <span className="mt-2 flex items-center gap-2.5 text-[11.5px] text-muted">
+                  <span className="mt-1.5 flex items-center gap-2.5 text-[11px] text-muted">
                     <StepBar swarm={s} className="flex-1" />
                     <span className="shrink-0 tabular-nums">
                       {total ? `${done}/${total}` : "…"}
                       {running ? ` · ${running} running` : ""}
                       {s.status === "planning" || s.status === "running" ? ` · ${elapsed(s.created_at, now)}` : ""}
                     </span>
-                    <ArrowRight size={12} className="shrink-0 text-faint" />
+                    <ArrowRight size={12} className="shrink-0 text-faint" aria-hidden />
                   </span>
                 </button>
               </li>
