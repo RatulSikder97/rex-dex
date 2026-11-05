@@ -1,0 +1,44 @@
+{
+  "id": "theme-tokyo-night",
+  "name": "Tokyo Night Theme",
+  "version": "1.0.0",
+  "description": "A clean dark theme inspired by Tokyo's city lights (port of the MIT-licensed palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "tokyo-night",
+        "label": "Tokyo Night",
+        "kind": "dark",
+        "colors": {
+          "bg": "#1a1b26",
+          "bg-editor": "#1a1b26",
+          "bg-side": "#16161e",
+          "bg-activity": "#16161e",
+          "bg-panel": "#1a1b26",
+          "bg-elev": "#24283b",
+          "bg-hover": "#292e42",
+          "bg-active": "#2f3549",
+          "bg-input": "#16161e",
+          "border": "#292e42",
+          "fg": "#c0caf5",
+          "fg-muted": "#a9b1d6",
+          "fg-faint": "#565f89",
+          "accent": "#7aa2f7",
+          "accent-fg": "#1a1b26",
+          "ok": "#9ece6a",
+          "warn": "#e0af68",
+          "err": "#f7768e",
+          "status": "#7aa2f7",
+          "status-fg": "#1a1b26",
+          "bg-title": "#16161e",
+          "selection": "rgba(122,162,247,.28)"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256">
+  <!-- REX app icon (full bleed: Windows / Linux). Same marks as the project logo. -->
+  <rect width="256" height="256" rx="56" fill="#10131A"/>
+  <rect x="1" y="1" width="254" height="254" rx="55" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="2"/>
+  <path d="M68 52H150A48 48 0 0 1 150 148H108V200H68Z M108 86V114H148A14 14 0 0 0 148 86Z" fill="#F5F3EE" fill-rule="evenodd"/>
+  <path d="M120 148H164L196 200H152Z" fill="#FF4D2E"/>
+</svg>

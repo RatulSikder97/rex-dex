@@ -1,0 +1,35 @@
+{
+  "id": "final-cut-pro",
+  "name": "Final Cut Pro",
+  "version": "1.0.0",
+  "description": "Open REX renders and media in Final Cut Pro.",
+  "author": "REX",
+  "icon": "Scissors",
+  "categories": [
+    "Connections",
+    "Video"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "final-cut-pro",
+        "name": "Final Cut Pro",
+        "description": "Open REX renders and media in Final Cut Pro.",
+        "icon": "Scissors",
+        "category": "video",
+        "departments": [
+          "video"
+        ],
+        "kind": "app",
+        "apps": [
+          "Final Cut Pro"
+        ],
+        "actions": [
+          "open-media"
+        ],
+        "auth": "none",
+        "setupHint": "Requires Final Cut Pro in /Applications."
+      }
+    ]
+  }
+}

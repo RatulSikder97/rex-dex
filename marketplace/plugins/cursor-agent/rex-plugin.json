@@ -1,0 +1,32 @@
+{
+  "id": "cursor-agent",
+  "name": "Cursor Agent",
+  "version": "1.0.0",
+  "description": "Adds Cursor's terminal agent (cursor-agent) as an AI agent for any department. Uses your Cursor login — no API key. Read-only runs use Ask mode; with edits allowed it runs with --force.",
+  "author": "REX",
+  "icon": "MousePointer2",
+  "categories": ["Agents", "Coding"],
+  "homepage": "https://cursor.com/cli",
+  "contributes": {
+    "agents": [
+      {
+        "id": "cursor-agent",
+        "name": "Cursor Agent",
+        "description": "Cursor's coding agent CLI with access to Cursor's model lineup.",
+        "icon": "MousePointer2",
+        "homepage": "https://cursor.com/cli",
+        "command": "cursor-agent",
+        "args": ["-p", "--output-format", "stream-json", "{prompt}"],
+        "prompt": "arg",
+        "readOnlyArgs": ["--mode", "ask"],
+        "editArgs": ["--force"],
+        "modelArgs": ["--model", "{model}"],
+        "models": ["auto", "sonnet-4.5", "gpt-5", "opus-4.1"],
+        "output": "cursor-stream-json",
+        "interactiveArgs": [],
+        "install": "curl https://cursor.com/install -fsS | bash",
+        "login": "cursor-agent login"
+      }
+    ]
+  }
+}

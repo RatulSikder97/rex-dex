@@ -1,0 +1,36 @@
+{
+  "id": "davinci-resolve",
+  "name": "DaVinci Resolve",
+  "version": "1.0.0",
+  "description": "Open REX renders in DaVinci Resolve, or import an XML timeline with scene markers for color and finishing.",
+  "author": "REX",
+  "icon": "Film",
+  "categories": [
+    "Connections",
+    "Video"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "davinci-resolve",
+        "name": "DaVinci Resolve",
+        "description": "Open REX renders in DaVinci Resolve, or import an XML timeline with scene markers for color and finishing.",
+        "icon": "Film",
+        "category": "video",
+        "departments": [
+          "video"
+        ],
+        "kind": "app",
+        "apps": [
+          "DaVinci Resolve"
+        ],
+        "actions": [
+          "open-media",
+          "export-fcpxml"
+        ],
+        "auth": "none",
+        "setupHint": "Requires DaVinci Resolve in /Applications. Import the XML via File \u25b8 Import \u25b8 Timeline."
+      }
+    ]
+  }
+}

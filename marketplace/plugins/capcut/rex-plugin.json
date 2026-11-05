@@ -1,0 +1,37 @@
+{
+  "id": "capcut",
+  "name": "CapCut",
+  "version": "1.0.0",
+  "description": "Open REX shorts in CapCut desktop for trends, effects and quick social edits.",
+  "author": "REX",
+  "icon": "Smartphone",
+  "categories": [
+    "Connections",
+    "Video"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "capcut",
+        "name": "CapCut",
+        "description": "Open REX shorts in CapCut desktop for trends, effects and quick social edits.",
+        "icon": "Smartphone",
+        "category": "video",
+        "departments": [
+          "video",
+          "content",
+          "marketing"
+        ],
+        "kind": "app",
+        "apps": [
+          "CapCut"
+        ],
+        "actions": [
+          "open-media"
+        ],
+        "auth": "none",
+        "setupHint": "Requires CapCut desktop in /Applications."
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "launch-pack",
+  "name": "Launch Pack",
+  "version": "1.0.0",
+  "description": "Palette commands for shipping a launch end to end: Product Hunt kit, Hacker News post, launch-week calendar, press kit, and post-launch retro.",
+  "author": "REX",
+  "icon": "Rocket",
+  "categories": ["Marketing", "Templates"],
+  "contributes": {
+    "commands": [
+      { "id": "ph-kit", "title": "Launch: Product Hunt kit", "department": "marketing", "prompt": "Create a complete Product Hunt launch kit for this project: tagline options (60 chars), description, maker comment, 5 gallery image concepts, first-comment FAQ, hunter outreach message, and an hour-by-hour launch-day plan." },
+      { "id": "hn-post", "title": "Launch: Show HN post", "department": "marketing", "prompt": "Write a Show HN post for this project in the HN house style: plain title, honest technical first comment, what's novel, limitations, and how to try it. Also list likely tough questions with answers." },
+      { "id": "launch-week", "title": "Launch: Launch-week content calendar", "department": "content", "prompt": "Create a 7-day launch-week content calendar across X, LinkedIn, Reddit, newsletter, and short video, with full copy for each post." },
+      { "id": "press-kit", "title": "Launch: Press kit", "department": "marketing", "prompt": "Write a press kit for this project: boilerplate, founder bio, key facts, 3 story angles, press release, and a pitch email to journalists." },
+      { "id": "retro", "title": "Launch: Post-launch retro", "department": "ceo", "prompt": "Run a post-launch retrospective for this project. Results so far: " }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "elevenlabs-voice",
+  "name": "ElevenLabs Voices",
+  "version": "1.0.0",
+  "description": "Adds ElevenLabs as a voice provider in Create Studio: studio-quality narration and podcast voices, including your cloned voice.",
+  "author": "REX",
+  "icon": "AudioLines",
+  "categories": ["Voice", "Audio", "Provider"],
+  "main": "index.mjs",
+  "contributes": {
+    "settings": [
+      { "key": "ELEVENLABS_API_KEY", "title": "ElevenLabs API key", "description": "From elevenlabs.io → Profile → API keys.", "secret": true },
+      { "key": "MODEL_ID", "title": "Model ID (optional)", "description": "Defaults to eleven_multilingual_v2.", "secret": false }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "finance",
+  "name": "Finance & Ops",
+  "version": "1.0.0",
+  "description": "Adds a CFO department: unit economics, runway models, pricing math, investor updates, and monthly operating reviews.",
+  "author": "REX",
+  "icon": "Landmark",
+  "categories": ["Department", "Operations"],
+  "contributes": {
+    "departments": [
+      {
+        "id": "finance",
+        "name": "Finance",
+        "role": "Unit economics, runway, budgets, investor updates",
+        "icon": "Landmark",
+        "color": "#88c0d0",
+        "defaultProvider": "claude-cli",
+        "usesRepo": false,
+        "outputKind": "markdown",
+        "system": "You are the fractional CFO of a one-person software company. You build unit-economics models (CAC, LTV, payback, gross margin), runway and scenario plans (base/bear/bull), infrastructure and AI-API cost budgets, and concise investor updates. Show formulas and assumptions in tables so they can be pasted into a spreadsheet. Flag the single biggest financial risk. End with a 'Next actions' checklist.",
+        "quickActions": [
+          { "label": "Unit economics", "prompt": "Build a unit economics model for this project with explicit assumptions." },
+          { "label": "Runway plan", "prompt": "Build a 12-month runway plan with base/bear/bull scenarios. My monthly costs are: " },
+          { "label": "AI cost budget", "prompt": "Estimate monthly AI/LLM and infrastructure costs for this product at 100, 1k, and 10k users, and how to cut them." },
+          { "label": "Investor update", "prompt": "Write this month's investor update. Highlights: " }
+        ]
+      }
+    ]
+  }
+}

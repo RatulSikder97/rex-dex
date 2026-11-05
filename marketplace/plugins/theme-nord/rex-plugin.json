@@ -1,0 +1,44 @@
+{
+  "id": "theme-nord",
+  "name": "Nord Theme",
+  "version": "1.0.0",
+  "description": "An arctic, north-bluish palette (port of the MIT-licensed Nord palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "nord",
+        "label": "Nord",
+        "kind": "dark",
+        "colors": {
+          "bg": "#2e3440",
+          "bg-editor": "#2e3440",
+          "bg-side": "#3b4252",
+          "bg-activity": "#3b4252",
+          "bg-panel": "#2e3440",
+          "bg-elev": "#3b4252",
+          "bg-hover": "#434c5e",
+          "bg-active": "#4c566a",
+          "bg-input": "#3b4252",
+          "border": "#434c5e",
+          "fg": "#eceff4",
+          "fg-muted": "#b8c2d3",
+          "fg-faint": "#7b88a1",
+          "accent": "#88c0d0",
+          "accent-fg": "#2e3440",
+          "ok": "#a3be8c",
+          "warn": "#ebcb8b",
+          "err": "#bf616a",
+          "status": "#5e81ac",
+          "status-fg": "#eceff4",
+          "bg-title": "#3b4252",
+          "selection": "rgba(136,192,208,.3)"
+        }
+      }
+    ]
+  }
+}

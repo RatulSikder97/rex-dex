@@ -1,0 +1,31 @@
+{
+  "id": "gemini-cli",
+  "name": "Gemini CLI",
+  "version": "1.0.0",
+  "description": "Adds Google's Gemini CLI as an AI agent. Sign in with your Google account in the terminal — no API key needed. Edits are auto-approved only when you allow edits.",
+  "author": "REX",
+  "icon": "Gem",
+  "categories": ["Agents", "Coding"],
+  "homepage": "https://github.com/google-gemini/gemini-cli",
+  "contributes": {
+    "agents": [
+      {
+        "id": "gemini-cli",
+        "name": "Gemini CLI",
+        "description": "Google's open-source terminal agent with a large context window.",
+        "icon": "Gem",
+        "homepage": "https://github.com/google-gemini/gemini-cli",
+        "command": "gemini",
+        "args": ["--output-format", "stream-json"],
+        "prompt": "stdin",
+        "editArgs": ["--approval-mode", "auto_edit"],
+        "modelArgs": ["--model", "{model}"],
+        "models": ["gemini-2.5-pro", "gemini-2.5-flash"],
+        "output": "gemini-stream-json",
+        "interactiveArgs": [],
+        "install": "npm install -g @google/gemini-cli",
+        "login": "gemini"
+      }
+    ]
+  }
+}

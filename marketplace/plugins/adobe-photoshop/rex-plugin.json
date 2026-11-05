@@ -1,0 +1,36 @@
+{
+  "id": "adobe-photoshop",
+  "name": "Adobe Photoshop",
+  "version": "1.0.0",
+  "description": "Open REX graphics, thumbnails and video stills in Photoshop for retouching.",
+  "author": "REX",
+  "icon": "Image",
+  "categories": [
+    "Connections",
+    "Design"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "adobe-photoshop",
+        "name": "Adobe Photoshop",
+        "description": "Open REX graphics, thumbnails and video stills in Photoshop for retouching.",
+        "icon": "Image",
+        "category": "design",
+        "departments": [
+          "design",
+          "marketing"
+        ],
+        "kind": "app",
+        "apps": [
+          "Adobe Photoshop"
+        ],
+        "actions": [
+          "open-media"
+        ],
+        "auth": "none",
+        "setupHint": "Requires Photoshop in /Applications."
+      }
+    ]
+  }
+}

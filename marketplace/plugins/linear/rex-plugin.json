@@ -1,0 +1,47 @@
+{
+  "id": "linear",
+  "name": "Linear",
+  "version": "1.0.0",
+  "description": "Product and Engineering read and update Linear issues, projects and cycles.",
+  "author": "REX",
+  "icon": "ListTodo",
+  "categories": [
+    "Connections",
+    "Productivity"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "linear": {
+        "url": "https://mcp.linear.app/mcp",
+        "transport": "http",
+        "departments": [
+          "product",
+          "engineering",
+          "qa",
+          "ceo"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "linear",
+        "name": "Linear",
+        "description": "Product and Engineering read and update Linear issues, projects and cycles.",
+        "icon": "ListTodo",
+        "category": "productivity",
+        "departments": [
+          "product",
+          "engineering",
+          "qa",
+          "ceo"
+        ],
+        "kind": "mcp",
+        "mcpServer": "linear",
+        "auth": "oauth",
+        "docs": "https://linear.app/docs/mcp",
+        "setupHint": "Click Connect: your browser opens Linear's sign-in page. Approve REX, and you're connected; the departments' agents get Linear's tools."
+      }
+    ]
+  },
+  "homepage": "https://linear.app/docs/mcp"
+}

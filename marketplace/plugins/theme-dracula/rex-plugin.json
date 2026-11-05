@@ -1,0 +1,44 @@
+{
+  "id": "theme-dracula",
+  "name": "Dracula Theme",
+  "version": "1.0.0",
+  "description": "Dark theme with vivid purple, pink and green accents (port of the MIT-licensed Dracula palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "dracula",
+        "label": "Dracula",
+        "kind": "dark",
+        "colors": {
+          "bg": "#282a36",
+          "bg-editor": "#282a36",
+          "bg-side": "#21222c",
+          "bg-activity": "#21222c",
+          "bg-panel": "#282a36",
+          "bg-elev": "#343746",
+          "bg-hover": "#44475a",
+          "bg-active": "#44475a",
+          "bg-input": "#21222c",
+          "border": "#44475a",
+          "fg": "#f8f8f2",
+          "fg-muted": "#bdc0d0",
+          "fg-faint": "#6272a4",
+          "accent": "#bd93f9",
+          "accent-fg": "#282a36",
+          "ok": "#50fa7b",
+          "warn": "#f1fa8c",
+          "err": "#ff5555",
+          "status": "#bd93f9",
+          "status-fg": "#282a36",
+          "bg-title": "#21222c",
+          "selection": "rgba(189,147,249,.3)"
+        }
+      }
+    ]
+  }
+}

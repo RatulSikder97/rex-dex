@@ -1,0 +1,47 @@
+{
+  "id": "notion",
+  "name": "Notion",
+  "version": "1.0.0",
+  "description": "Product, Content and the Chief of Staff search, read and write your Notion pages and databases (specs, roadmaps, content calendars).",
+  "author": "REX",
+  "icon": "NotebookPen",
+  "categories": [
+    "Connections",
+    "Productivity"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "notion": {
+        "url": "https://mcp.notion.com/mcp",
+        "transport": "http",
+        "departments": [
+          "ceo",
+          "product",
+          "content",
+          "marketing"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "notion",
+        "name": "Notion",
+        "description": "Product, Content and the Chief of Staff search, read and write your Notion pages and databases (specs, roadmaps, content calendars).",
+        "icon": "NotebookPen",
+        "category": "productivity",
+        "departments": [
+          "ceo",
+          "product",
+          "content",
+          "marketing"
+        ],
+        "kind": "mcp",
+        "mcpServer": "notion",
+        "auth": "oauth",
+        "docs": "https://developers.notion.com/docs/mcp",
+        "setupHint": "Click Connect: your browser opens Notion's sign-in page. Approve REX, and you're connected; the departments' agents get Notion's tools."
+      }
+    ]
+  },
+  "homepage": "https://developers.notion.com/docs/mcp"
+}

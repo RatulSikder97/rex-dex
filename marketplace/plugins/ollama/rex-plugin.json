@@ -1,0 +1,29 @@
+{
+  "id": "ollama",
+  "name": "Ollama (local models)",
+  "version": "1.0.0",
+  "description": "Run departments on local models through the Ollama CLI — fully offline, free, private. Models are discovered from `ollama list`. Text-only (no file edits).",
+  "author": "REX",
+  "icon": "HardDrive",
+  "categories": ["Agents", "Local"],
+  "homepage": "https://ollama.com",
+  "contributes": {
+    "agents": [
+      {
+        "id": "ollama",
+        "name": "Ollama",
+        "description": "Local open models (Qwen, Llama, gpt-oss…) on your machine.",
+        "icon": "HardDrive",
+        "homepage": "https://ollama.com",
+        "command": "ollama",
+        "args": ["run", "{model}"],
+        "prompt": "stdin",
+        "listModels": { "args": ["list"], "skipHeader": true },
+        "models": ["qwen2.5-coder:7b", "llama3.2"],
+        "output": "text",
+        "interactiveArgs": ["run", "{model}"],
+        "install": "brew install ollama && ollama pull qwen2.5-coder:7b"
+      }
+    ]
+  }
+}

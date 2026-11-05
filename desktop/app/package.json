@@ -1,0 +1,10 @@
+{
+  "name": "rex-desktop",
+  "productName": "REX",
+  "version": "0.1.0",
+  "description": "REX — one-person company operating system.",
+  "author": "REX",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js"
+}

@@ -1,0 +1,47 @@
+{
+  "id": "stripe",
+  "name": "Stripe",
+  "version": "1.0.0",
+  "description": "The Chief of Staff, Finance and Sales look up customers, subscriptions, payments and revenue in Stripe.",
+  "author": "REX",
+  "icon": "CreditCard",
+  "categories": [
+    "Connections",
+    "Commerce"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "stripe": {
+        "url": "https://mcp.stripe.com",
+        "transport": "http",
+        "departments": [
+          "ceo",
+          "finance",
+          "sales",
+          "support"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "stripe",
+        "name": "Stripe",
+        "description": "The Chief of Staff, Finance and Sales look up customers, subscriptions, payments and revenue in Stripe.",
+        "icon": "CreditCard",
+        "category": "commerce",
+        "departments": [
+          "ceo",
+          "finance",
+          "sales",
+          "support"
+        ],
+        "kind": "mcp",
+        "mcpServer": "stripe",
+        "auth": "oauth",
+        "docs": "https://docs.stripe.com/mcp",
+        "setupHint": "Click Connect: your browser opens Stripe's sign-in page. Approve REX, and you're connected; the departments' agents get Stripe's tools."
+      }
+    ]
+  },
+  "homepage": "https://docs.stripe.com/mcp"
+}

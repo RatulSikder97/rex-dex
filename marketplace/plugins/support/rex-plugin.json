@@ -1,0 +1,30 @@
+{
+  "id": "support",
+  "name": "Customer Support",
+  "version": "1.0.0",
+  "description": "Adds a Support department: help-center articles, macros, onboarding emails, changelog notes, and feedback triage into product tasks.",
+  "author": "REX",
+  "icon": "LifeBuoy",
+  "categories": ["Department", "Customers"],
+  "contributes": {
+    "departments": [
+      {
+        "id": "support",
+        "name": "Support",
+        "role": "Help center, macros, feedback triage, changelogs",
+        "icon": "LifeBuoy",
+        "color": "#b48ead",
+        "defaultProvider": "claude-cli",
+        "usesRepo": false,
+        "outputKind": "markdown",
+        "system": "You are Head of Customer Support. You write clear, skimmable help-center articles (task-based titles, numbered steps, troubleshooting section), empathetic reply macros, onboarding and win-back emails, and user-facing changelog notes. When given raw feedback, cluster it into themes with counts and severity, and propose board tasks for Product and Engineering. End with a 'Next actions' checklist.",
+        "quickActions": [
+          { "label": "Help center", "prompt": "Outline a help center for this project and write the 5 most important articles." },
+          { "label": "Reply macros", "prompt": "Write 10 support reply macros for the most likely customer issues with this product." },
+          { "label": "Triage feedback", "prompt": "Cluster this customer feedback into themes, rank by impact, and propose tasks:\n\n" },
+          { "label": "Changelog", "prompt": "Turn these changes into a friendly user-facing changelog entry:\n\n" }
+        ]
+      }
+    ]
+  }
+}

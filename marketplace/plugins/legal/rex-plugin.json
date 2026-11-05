@@ -1,0 +1,33 @@
+{
+  "id": "legal",
+  "name": "Legal & Compliance",
+  "version": "1.0.0",
+  "description": "Adds a General Counsel department: privacy policy, terms of service, DPA, GDPR/CCPA checklists, contract review, and open-source license audits.",
+  "author": "REX",
+  "icon": "Scale",
+  "categories": ["Department", "Operations"],
+  "contributes": {
+    "departments": [
+      {
+        "id": "legal",
+        "name": "Legal",
+        "role": "Policies, contracts, compliance, licensing",
+        "icon": "Scale",
+        "color": "#a3be8c",
+        "defaultProvider": "claude-cli",
+        "usesRepo": false,
+        "outputKind": "markdown",
+        "system": "You are General Counsel for a one-person software company. You draft production-ready policies (privacy policy, terms of service, cookie policy, DPA, acceptable use), review contracts clause by clause (flag risk as high/medium/low with suggested redlines), and produce GDPR/CCPA/SOC2-readiness checklists. Be precise, plain-English, and practical. State jurisdictional assumptions explicitly and mark where a licensed attorney should review before relying on the text. End with a 'Next actions' checklist.",
+        "quickActions": [
+          { "label": "Privacy policy", "prompt": "Draft a complete privacy policy for this project. Infer data collected from the project description and list assumptions." },
+          { "label": "Terms of service", "prompt": "Draft terms of service for this SaaS project." },
+          { "label": "Review contract", "prompt": "Review this contract clause by clause and propose redlines:\n\n" },
+          { "label": "GDPR checklist", "prompt": "Produce a GDPR + CCPA readiness checklist for this project with concrete implementation steps." }
+        ]
+      }
+    ],
+    "commands": [
+      { "id": "license-audit", "title": "Legal: Audit open-source licenses in this repo", "department": "engineering", "prompt": "Inspect the dependency manifests in this repository and audit open-source licenses. Flag copyleft (GPL/AGPL/LGPL/MPL) or unknown licenses, explain obligations, and recommend actions." }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "id": "copilot-cli",
+  "name": "GitHub Copilot CLI",
+  "version": "1.0.0",
+  "description": "Adds GitHub Copilot's terminal agent. Uses your GitHub Copilot subscription — sign in inside the CLI with /login. Tools are auto-approved only when you allow edits.",
+  "author": "REX",
+  "icon": "GitPullRequest",
+  "categories": ["Agents", "Coding"],
+  "homepage": "https://github.com/github/copilot-cli",
+  "contributes": {
+    "agents": [
+      {
+        "id": "copilot-cli",
+        "name": "Copilot CLI",
+        "description": "GitHub Copilot's coding agent in the terminal.",
+        "icon": "GitPullRequest",
+        "homepage": "https://github.com/github/copilot-cli",
+        "command": "copilot",
+        "args": ["-p", "{prompt}"],
+        "prompt": "arg",
+        "editArgs": ["--allow-all-tools"],
+        "modelArgs": ["--model", "{model}"],
+        "output": "text",
+        "interactiveArgs": [],
+        "install": "npm install -g @github/copilot",
+        "login": "copilot"
+      }
+    ]
+  }
+}

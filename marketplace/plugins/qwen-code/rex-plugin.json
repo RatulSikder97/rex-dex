@@ -1,0 +1,30 @@
+{
+  "id": "qwen-code",
+  "name": "Qwen Code",
+  "version": "1.0.0",
+  "description": "Adds Qwen Code (Alibaba's terminal coding agent, Gemini CLI-compatible) as an AI agent. Sign in with Qwen OAuth in the terminal.",
+  "author": "REX",
+  "icon": "Cpu",
+  "categories": ["Agents", "Coding"],
+  "homepage": "https://github.com/QwenLM/qwen-code",
+  "contributes": {
+    "agents": [
+      {
+        "id": "qwen-code",
+        "name": "Qwen Code",
+        "description": "Qwen3-Coder in a Gemini CLI-style terminal agent.",
+        "icon": "Cpu",
+        "homepage": "https://github.com/QwenLM/qwen-code",
+        "command": "qwen",
+        "args": ["--output-format", "stream-json"],
+        "prompt": "stdin",
+        "editArgs": ["--approval-mode", "auto_edit"],
+        "modelArgs": ["--model", "{model}"],
+        "output": "gemini-stream-json",
+        "interactiveArgs": [],
+        "install": "npm install -g @qwen-code/qwen-code",
+        "login": "qwen"
+      }
+    ]
+  }
+}

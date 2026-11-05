@@ -1,0 +1,29 @@
+{
+  "id": "opencode",
+  "name": "OpenCode",
+  "version": "1.0.0",
+  "description": "Adds OpenCode, the open-source terminal coding agent that works with many model providers (including local ones). Sign in with `opencode auth login`.",
+  "author": "REX",
+  "icon": "Code",
+  "categories": ["Agents", "Coding"],
+  "homepage": "https://opencode.ai",
+  "contributes": {
+    "agents": [
+      {
+        "id": "opencode",
+        "name": "OpenCode",
+        "description": "Provider-agnostic open-source coding agent.",
+        "icon": "Code",
+        "homepage": "https://opencode.ai",
+        "command": "opencode",
+        "args": ["run", "{prompt}"],
+        "prompt": "arg",
+        "modelArgs": ["-m", "{model}"],
+        "output": "text",
+        "interactiveArgs": [],
+        "install": "npm install -g opencode-ai",
+        "login": "opencode auth login"
+      }
+    ]
+  }
+}

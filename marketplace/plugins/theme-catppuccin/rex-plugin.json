@@ -1,0 +1,73 @@
+{
+  "id": "theme-catppuccin",
+  "name": "Catppuccin Themes",
+  "version": "1.0.0",
+  "description": "Soothing pastel themes: Mocha (dark) and Latte (light) (port of the MIT-licensed Catppuccin palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "catppuccin-mocha",
+        "label": "Catppuccin Mocha",
+        "kind": "dark",
+        "colors": {
+          "bg": "#1e1e2e",
+          "bg-editor": "#1e1e2e",
+          "bg-side": "#181825",
+          "bg-activity": "#11111b",
+          "bg-panel": "#1e1e2e",
+          "bg-elev": "#313244",
+          "bg-hover": "#45475a",
+          "bg-active": "#45475a",
+          "bg-input": "#181825",
+          "border": "#313244",
+          "fg": "#cdd6f4",
+          "fg-muted": "#a6adc8",
+          "fg-faint": "#6c7086",
+          "accent": "#cba6f7",
+          "accent-fg": "#1e1e2e",
+          "ok": "#a6e3a1",
+          "warn": "#f9e2af",
+          "err": "#f38ba8",
+          "status": "#cba6f7",
+          "status-fg": "#1e1e2e",
+          "bg-title": "#181825",
+          "selection": "rgba(203,166,247,.28)"
+        }
+      },
+      {
+        "id": "catppuccin-latte",
+        "label": "Catppuccin Latte",
+        "kind": "light",
+        "colors": {
+          "bg": "#eff1f5",
+          "bg-editor": "#eff1f5",
+          "bg-side": "#e6e9ef",
+          "bg-activity": "#dce0e8",
+          "bg-panel": "#eff1f5",
+          "bg-elev": "#ffffff",
+          "bg-hover": "#dce0e8",
+          "bg-active": "#ccd0da",
+          "bg-input": "#ffffff",
+          "border": "#ccd0da",
+          "fg": "#4c4f69",
+          "fg-muted": "#6c6f85",
+          "fg-faint": "#9ca0b0",
+          "accent": "#8839ef",
+          "accent-fg": "#ffffff",
+          "ok": "#40a02b",
+          "warn": "#df8e1d",
+          "err": "#d20f39",
+          "status": "#8839ef",
+          "status-fg": "#ffffff",
+          "bg-title": "#e6e9ef",
+          "selection": "rgba(136,57,239,.18)"
+        }
+      }
+    ]
+  }
+}

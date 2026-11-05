@@ -1,0 +1,43 @@
+{
+  "id": "vercel",
+  "name": "Vercel",
+  "version": "1.0.0",
+  "description": "Engineering and QA check deployments, build logs, domains and projects on Vercel.",
+  "author": "REX",
+  "icon": "Triangle",
+  "categories": [
+    "Connections",
+    "Dev"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "vercel": {
+        "url": "https://mcp.vercel.com",
+        "transport": "http",
+        "departments": [
+          "engineering",
+          "qa"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "vercel",
+        "name": "Vercel",
+        "description": "Engineering and QA check deployments, build logs, domains and projects on Vercel.",
+        "icon": "Triangle",
+        "category": "dev",
+        "departments": [
+          "engineering",
+          "qa"
+        ],
+        "kind": "mcp",
+        "mcpServer": "vercel",
+        "auth": "oauth",
+        "docs": "https://vercel.com/docs/mcp",
+        "setupHint": "Click Connect: your browser opens Vercel's sign-in page. Approve REX, and you're connected; the departments' agents get Vercel's tools."
+      }
+    ]
+  },
+  "homepage": "https://vercel.com/docs/mcp"
+}

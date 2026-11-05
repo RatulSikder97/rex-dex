@@ -1,0 +1,20 @@
+node_modules
+.next
+data/
+.env*.local
+*.tsbuildinfo
+next-env.d.ts
+.playwright-mcp/
+
+# desktop app
+/desktop/stage/
+/dist/
+
+# never commit local secrets / machine state
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+/out/
+coverage/

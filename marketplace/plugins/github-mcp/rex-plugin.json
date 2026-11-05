@@ -1,0 +1,62 @@
+{
+  "id": "github-mcp",
+  "name": "GitHub (MCP)",
+  "version": "2.0.0",
+  "description": "Gives Engineering, QA and Product GitHub tools (repos, issues, PRs, Actions, code search) through GitHub's official MCP server. Sign in with GitHub in the browser \u2014 no tokens to paste.",
+  "author": "REX",
+  "icon": "GitPullRequest",
+  "categories": [
+    "Connections",
+    "MCP",
+    "Engineering"
+  ],
+  "contributes": {
+    "settings": [],
+    "mcpServers": {
+      "github": {
+        "url": "https://api.githubcopilot.com/mcp/",
+        "transport": "http",
+        "departments": [
+          "engineering",
+          "qa",
+          "product"
+        ]
+      }
+    },
+    "commands": [
+      {
+        "id": "triage",
+        "title": "GitHub: Triage open issues into a plan",
+        "department": "engineering",
+        "prompt": "Using the GitHub tools, list open issues in this project's repository, cluster them, rank by impact/effort, and propose a sprint plan."
+      },
+      {
+        "id": "release-notes",
+        "title": "GitHub: Draft release notes from merged PRs",
+        "department": "engineering",
+        "prompt": "Using the GitHub tools, gather PRs merged since the last release and draft release notes grouped by Features, Fixes, and Internal."
+      }
+    ],
+    "connections": [
+      {
+        "id": "github",
+        "name": "GitHub",
+        "description": "Repos, issues, pull requests, Actions and code search.",
+        "icon": "GitPullRequest",
+        "category": "dev",
+        "departments": [
+          "engineering",
+          "qa",
+          "product"
+        ],
+        "kind": "mcp",
+        "mcpServer": "github",
+        "auth": "browser-cli",
+        "authCommand": "command -v gh >/dev/null || brew install gh; gh auth status >/dev/null 2>&1 || gh auth login --web --git-protocol https --hostname github.com",
+        "checkCommand": "gh auth status >/dev/null 2>&1",
+        "tokenCommand": "gh auth token",
+        "setupHint": "Click Connect: GitHub opens in your browser; enter the code REX shows and approve."
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "google-search-console",
+  "name": "Google Search Console",
+  "version": "2.0.0",
+  "description": "SEO & AEO and Marketing get your real search data: queries, pages, clicks, impressions, CTR, rankings, sitemaps and URL inspection. Connect with your Google account in the browser.",
+  "author": "REX",
+  "icon": "Search",
+  "categories": [
+    "Connections",
+    "Seo"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "google_search_console": {
+        "command": "node",
+        "args": [
+          "${rex:bin}/rex-google-mcp.mjs",
+          "--product",
+          "gsc"
+        ],
+        "departments": [
+          "seo",
+          "marketing",
+          "content",
+          "ceo"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "google-search-console",
+        "name": "Google Search Console",
+        "description": "SEO & AEO and Marketing get your real search data: queries, pages, clicks, impressions, CTR, rankings, sitemaps and URL inspection. Connect with your Google account in the browser.",
+        "icon": "Search",
+        "category": "seo",
+        "departments": [
+          "seo",
+          "marketing",
+          "content",
+          "ceo"
+        ],
+        "kind": "mcp",
+        "mcpServer": "google_search_console",
+        "auth": "browser-cli",
+        "authCommand": "export PATH=\"/opt/homebrew/share/google-cloud-sdk/bin:/usr/local/share/google-cloud-sdk/bin:$HOME/google-cloud-sdk/bin:$PATH\"; command -v gcloud >/dev/null || { echo \"Installing Google Cloud CLI (one time)\u2026\"; brew install --cask google-cloud-sdk; }; gcloud auth application-default login --scopes=openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/analytics.readonly,https://www.googleapis.com/auth/webmasters.readonly && node \"${rex:bin}/rex-google-mcp.mjs\" --setup",
+        "checkCommand": "node \"${rex:bin}/rex-google-mcp.mjs\" --check",
+        "setupHint": "Click Connect with Google: your browser opens Google's sign-in. Approve, and REX sets up the rest (Cloud project + APIs) automatically. First time only, REX installs the Google Cloud CLI."
+      }
+    ],
+    "commands": [
+      {
+        "id": "gsc-opportunities",
+        "title": "SEO: Find quick-win keywords in Search Console",
+        "department": "seo",
+        "prompt": "Using Google Search Console data for the last 28 days, find queries ranking in positions 5\u201320 with high impressions and low CTR. For each, recommend the page change (title, meta, section) to win the click."
+      }
+    ]
+  }
+}

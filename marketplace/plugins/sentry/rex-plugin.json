@@ -1,0 +1,43 @@
+{
+  "id": "sentry",
+  "name": "Sentry",
+  "version": "1.0.0",
+  "description": "Engineering and QA investigate production errors, issues and releases in Sentry.",
+  "author": "REX",
+  "icon": "Bug",
+  "categories": [
+    "Connections",
+    "Dev"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "sentry": {
+        "url": "https://mcp.sentry.dev/mcp",
+        "transport": "http",
+        "departments": [
+          "engineering",
+          "qa"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "sentry",
+        "name": "Sentry",
+        "description": "Engineering and QA investigate production errors, issues and releases in Sentry.",
+        "icon": "Bug",
+        "category": "dev",
+        "departments": [
+          "engineering",
+          "qa"
+        ],
+        "kind": "mcp",
+        "mcpServer": "sentry",
+        "auth": "oauth",
+        "docs": "https://docs.sentry.io/product/sentry-mcp/",
+        "setupHint": "Click Connect: your browser opens Sentry's sign-in page. Approve REX, and you're connected; the departments' agents get Sentry's tools."
+      }
+    ]
+  },
+  "homepage": "https://docs.sentry.io/product/sentry-mcp/"
+}

@@ -1,0 +1,73 @@
+{
+  "id": "theme-gruvbox",
+  "name": "Gruvbox Themes",
+  "version": "1.0.0",
+  "description": "Retro groove colors with warm contrast: Gruvbox Dark and Light (port of the MIT-licensed palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "gruvbox-dark",
+        "label": "Gruvbox Dark",
+        "kind": "dark",
+        "colors": {
+          "bg": "#282828",
+          "bg-editor": "#282828",
+          "bg-side": "#1d2021",
+          "bg-activity": "#1d2021",
+          "bg-panel": "#282828",
+          "bg-elev": "#3c3836",
+          "bg-hover": "#504945",
+          "bg-active": "#504945",
+          "bg-input": "#1d2021",
+          "border": "#3c3836",
+          "fg": "#ebdbb2",
+          "fg-muted": "#bdae93",
+          "fg-faint": "#7c6f64",
+          "accent": "#fabd2f",
+          "accent-fg": "#282828",
+          "ok": "#b8bb26",
+          "warn": "#fe8019",
+          "err": "#fb4934",
+          "status": "#458588",
+          "status-fg": "#fbf1c7",
+          "bg-title": "#1d2021",
+          "selection": "rgba(250,189,47,.25)"
+        }
+      },
+      {
+        "id": "gruvbox-light",
+        "label": "Gruvbox Light",
+        "kind": "light",
+        "colors": {
+          "bg": "#fbf1c7",
+          "bg-editor": "#fbf1c7",
+          "bg-side": "#f2e5bc",
+          "bg-activity": "#ebdbb2",
+          "bg-panel": "#fbf1c7",
+          "bg-elev": "#f9f5d7",
+          "bg-hover": "#ebdbb2",
+          "bg-active": "#d5c4a1",
+          "bg-input": "#f9f5d7",
+          "border": "#d5c4a1",
+          "fg": "#3c3836",
+          "fg-muted": "#665c54",
+          "fg-faint": "#928374",
+          "accent": "#b57614",
+          "accent-fg": "#fbf1c7",
+          "ok": "#79740e",
+          "warn": "#af3a03",
+          "err": "#9d0006",
+          "status": "#076678",
+          "status-fg": "#fbf1c7",
+          "bg-title": "#ebdbb2",
+          "selection": "rgba(181,118,20,.2)"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "playwright-mcp",
+  "name": "Browser Automation (Playwright MCP)",
+  "version": "1.0.0",
+  "description": "Lets Claude Code and Codex agents drive a real browser: end-to-end QA of your app, competitor research, SERP checks, and screenshot capture.",
+  "author": "REX",
+  "icon": "Globe",
+  "categories": [
+    "Connections",
+    "MCP",
+    "QA",
+    "SEO"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@playwright/mcp@latest",
+          "--headless"
+        ],
+        "departments": [
+          "qa",
+          "engineering",
+          "seo",
+          "marketing"
+        ]
+      }
+    },
+    "commands": [
+      {
+        "id": "e2e-smoke",
+        "title": "QA: Browser smoke test my app",
+        "department": "qa",
+        "prompt": "Using the browser tools, open the app at http://localhost:3000 (or the project website), walk the main user flows, and report broken links, console errors, layout bugs, and accessibility issues with severity."
+      },
+      {
+        "id": "competitor-scan",
+        "title": "SEO: Scan competitors' pages",
+        "department": "seo",
+        "prompt": "Using the browser tools, visit these competitor URLs and compare positioning, pricing, page structure, schema, and SEO/AEO tactics in a table: "
+      }
+    ],
+    "connections": [
+      {
+        "id": "playwright",
+        "name": "Browser Automation",
+        "description": "Lets Claude Code and Codex agents drive a real browser: end-to-end QA of your app, competitor research, SERP checks, and screenshot capture.",
+        "icon": "Globe",
+        "category": "dev",
+        "departments": [
+          "qa",
+          "engineering",
+          "seo",
+          "marketing"
+        ],
+        "kind": "mcp",
+        "mcpServer": "playwright",
+        "auth": "none",
+        "setupHint": "Works once enabled."
+      }
+    ]
+  }
+}

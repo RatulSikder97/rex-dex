@@ -1,0 +1,37 @@
+{
+  "id": "adobe-after-effects",
+  "name": "Adobe After Effects",
+  "version": "1.0.0",
+  "description": "Send REX videos to After Effects: a generated script builds a comp with the footage, scene markers and editable title layers.",
+  "author": "REX",
+  "icon": "Sparkles",
+  "categories": [
+    "Connections",
+    "Video"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "adobe-after-effects",
+        "name": "Adobe After Effects",
+        "description": "Send REX videos to After Effects: a generated script builds a comp with the footage, scene markers and editable title layers.",
+        "icon": "Sparkles",
+        "category": "video",
+        "departments": [
+          "video",
+          "design"
+        ],
+        "kind": "app",
+        "apps": [
+          "Adobe After Effects"
+        ],
+        "actions": [
+          "open-media",
+          "export-ae-jsx"
+        ],
+        "auth": "none",
+        "setupHint": "Requires After Effects in /Applications. Enable Settings \u25b8 Scripting & Expressions \u25b8 \u201cAllow Scripts to Write Files and Access Network\u201d and allow REX to control After Effects when macOS asks."
+      }
+    ]
+  }
+}

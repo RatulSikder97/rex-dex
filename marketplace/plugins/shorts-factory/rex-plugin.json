@@ -1,0 +1,18 @@
+{
+  "id": "shorts-factory",
+  "name": "Shorts Factory",
+  "version": "1.0.0",
+  "description": "Create Studio presets for founder-led short-form video and audio: founder story reels, feature demos, weekly changelog videos, myth-busters, and podcast teasers.",
+  "author": "REX",
+  "icon": "Film",
+  "categories": ["Video", "Audio", "Templates"],
+  "contributes": {
+    "pipelines": [
+      { "id": "founder-story", "title": "Founder story Reel (9:16, 45s)", "kind": "video", "aspect": "9:16", "targetSeconds": 45, "style": "Hook in the first 2 seconds, first-person founder voice, punchy on-screen text, bold high-contrast visuals.", "description": "Why I built this: problem, struggle, turning point, invitation.", "brief": "Tell the founder story behind this product: the painful problem, the failed alternatives, the insight, and an invitation to try it." },
+      { "id": "feature-demo", "title": "Feature demo Short (9:16, 30s)", "kind": "video", "aspect": "9:16", "targetSeconds": 30, "style": "Problem → feature → outcome. One idea per scene. Clean product-UI style visuals.", "description": "Showcase one feature with a concrete before/after.", "brief": "Show off this feature with a concrete before/after: " },
+      { "id": "changelog", "title": "Weekly changelog video (16:9, 60s)", "kind": "video", "aspect": "16:9", "targetSeconds": 60, "style": "Upbeat, scannable, one change per scene with a benefit-led headline.", "description": "Turn this week's shipped changes into a video update.", "brief": "Turn these shipped changes into a weekly product update video:\n" },
+      { "id": "myth-buster", "title": "Myth vs. fact carousel video (1:1, 30s)", "kind": "video", "aspect": "1:1", "targetSeconds": 30, "style": "Alternating 'Myth' and 'Fact' title cards, crisp contrast, confident tone.", "description": "Bust 3 myths in your niche; great for LinkedIn.", "brief": "Bust the 3 most common myths in this product's niche." },
+      { "id": "podcast-teaser", "title": "Podcast teaser (audio, 60s)", "kind": "audio", "targetSeconds": 60, "style": "Cold open with the most surprising line, then a fast summary and a CTA to listen.", "description": "A 60-second audio teaser for an episode.", "brief": "Write a 60-second teaser for an episode about: " }
+    ]
+  }
+}

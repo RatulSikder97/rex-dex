@@ -1,0 +1,102 @@
+{
+  "id": "theme-rex",
+  "name": "REX Originals",
+  "version": "1.0.0",
+  "description": "REX's own themes: Midnight (deep navy, electric accent), Graphite (neutral gray), and Paper (warm light).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "rex-midnight",
+        "label": "REX Midnight",
+        "kind": "dark",
+        "colors": {
+          "bg": "#0b1020",
+          "bg-editor": "#0d1326",
+          "bg-side": "#111833",
+          "bg-activity": "#0b1020",
+          "bg-panel": "#0d1326",
+          "bg-elev": "#161f3d",
+          "bg-hover": "#1e2a52",
+          "bg-active": "#24356a",
+          "bg-input": "#111833",
+          "border": "#1e2a4a",
+          "fg": "#e6ebff",
+          "fg-muted": "#9aa6c8",
+          "fg-faint": "#5d6a90",
+          "accent": "#5b8cff",
+          "accent-fg": "#ffffff",
+          "ok": "#3ddc97",
+          "warn": "#ffcc66",
+          "err": "#ff5d73",
+          "status": "#5b8cff",
+          "status-fg": "#ffffff",
+          "bg-title": "#0b1020",
+          "selection": "rgba(91,140,255,.3)"
+        }
+      },
+      {
+        "id": "rex-graphite",
+        "label": "REX Graphite",
+        "kind": "dark",
+        "colors": {
+          "bg": "#18181b",
+          "bg-editor": "#1c1c1f",
+          "bg-side": "#202024",
+          "bg-activity": "#18181b",
+          "bg-panel": "#1c1c1f",
+          "bg-elev": "#27272a",
+          "bg-hover": "#323236",
+          "bg-active": "#3f3f46",
+          "bg-input": "#202024",
+          "border": "#2e2e33",
+          "fg": "#e4e4e7",
+          "fg-muted": "#a1a1aa",
+          "fg-faint": "#71717a",
+          "accent": "#e4e4e7",
+          "accent-fg": "#18181b",
+          "ok": "#4ade80",
+          "warn": "#facc15",
+          "err": "#f87171",
+          "status": "#3f3f46",
+          "status-fg": "#fafafa",
+          "bg-title": "#18181b",
+          "selection": "rgba(228,228,231,.18)"
+        }
+      },
+      {
+        "id": "rex-paper",
+        "label": "REX Paper",
+        "kind": "light",
+        "colors": {
+          "bg": "#f6f3ee",
+          "bg-editor": "#fbf9f5",
+          "bg-side": "#efebe4",
+          "bg-activity": "#e7e2d9",
+          "bg-panel": "#fbf9f5",
+          "bg-elev": "#ffffff",
+          "bg-hover": "#e8e2d7",
+          "bg-active": "#dbe6f7",
+          "bg-input": "#ffffff",
+          "border": "#dcd5c8",
+          "fg": "#2a2620",
+          "fg-muted": "#6b6358",
+          "fg-faint": "#9a9184",
+          "accent": "#c2410c",
+          "accent-fg": "#ffffff",
+          "ok": "#15803d",
+          "warn": "#a16207",
+          "err": "#b91c1c",
+          "status": "#c2410c",
+          "status-fg": "#ffffff",
+          "bg-title": "#efebe4",
+          "selection": "rgba(194,65,12,.16)"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "id": "theme-solarized",
+  "name": "Solarized Themes",
+  "version": "1.0.0",
+  "description": "Precision colors for machines and people: Solarized Dark and Light (port of the MIT-licensed palette).",
+  "author": "REX",
+  "icon": "Palette",
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "id": "solarized-dark",
+        "label": "Solarized Dark",
+        "kind": "dark",
+        "colors": {
+          "bg": "#002b36",
+          "bg-editor": "#002b36",
+          "bg-side": "#073642",
+          "bg-activity": "#073642",
+          "bg-panel": "#002b36",
+          "bg-elev": "#073642",
+          "bg-hover": "#0d4b5a",
+          "bg-active": "#164e5c",
+          "bg-input": "#073642",
+          "border": "#0f4a57",
+          "fg": "#eee8d5",
+          "fg-muted": "#93a1a1",
+          "fg-faint": "#657b83",
+          "accent": "#268bd2",
+          "accent-fg": "#fdf6e3",
+          "ok": "#859900",
+          "warn": "#b58900",
+          "err": "#dc322f",
+          "status": "#268bd2",
+          "status-fg": "#fdf6e3",
+          "bg-title": "#073642",
+          "selection": "rgba(38,139,210,.3)"
+        }
+      },
+      {
+        "id": "solarized-light",
+        "label": "Solarized Light",
+        "kind": "light",
+        "colors": {
+          "bg": "#fdf6e3",
+          "bg-editor": "#fdf6e3",
+          "bg-side": "#eee8d5",
+          "bg-activity": "#eee8d5",
+          "bg-panel": "#fdf6e3",
+          "bg-elev": "#fffbf0",
+          "bg-hover": "#e6dfc8",
+          "bg-active": "#d9e6ee",
+          "bg-input": "#fffbf0",
+          "border": "#ddd6c1",
+          "fg": "#073642",
+          "fg-muted": "#586e75",
+          "fg-faint": "#93a1a1",
+          "accent": "#268bd2",
+          "accent-fg": "#ffffff",
+          "ok": "#859900",
+          "warn": "#b58900",
+          "err": "#dc322f",
+          "status": "#268bd2",
+          "status-fg": "#ffffff",
+          "bg-title": "#eee8d5",
+          "selection": "rgba(38,139,210,.22)"
+        }
+      }
+    ]
+  }
+}

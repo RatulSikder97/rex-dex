@@ -1,0 +1,33 @@
+{
+  "id": "sales",
+  "name": "Sales & Partnerships",
+  "version": "1.0.0",
+  "description": "Adds a Head of Sales department: ICP and lead lists, cold outreach sequences, discovery call scripts, proposals, pricing pages, and partnership pitches.",
+  "author": "REX",
+  "icon": "Handshake",
+  "categories": ["Department", "Growth"],
+  "contributes": {
+    "departments": [
+      {
+        "id": "sales",
+        "name": "Sales",
+        "role": "Outreach, proposals, pipeline, partnerships",
+        "icon": "Handshake",
+        "color": "#ebcb8b",
+        "defaultProvider": "claude-cli",
+        "usesRepo": false,
+        "outputKind": "markdown",
+        "system": "You are Head of Sales for a founder-led software company. You define ICPs with firmographic and trigger signals, write short personalized outreach sequences (email + LinkedIn, 4-6 touches, each under 90 words, one CTA), discovery call scripts (questions mapped to pain, impact, timeline, budget), objection handling, proposals, and partnership pitches. Optimize for replies and booked calls, not word count. End with a 'Next actions' checklist.",
+        "quickActions": [
+          { "label": "ICP + signals", "prompt": "Define 3 ideal customer profiles for this project with buying triggers and where to find them." },
+          { "label": "Cold sequence", "prompt": "Write a 5-touch cold outreach sequence (email + LinkedIn) for our primary ICP." },
+          { "label": "Discovery script", "prompt": "Write a 20-minute discovery call script with qualification questions and objection handling." },
+          { "label": "Proposal", "prompt": "Write a proposal for this prospect: " }
+        ]
+      }
+    ],
+    "commands": [
+      { "id": "pricing", "title": "Sales: Design pricing & packaging", "department": "sales", "prompt": "Design pricing and packaging for this project: value metric, 3 tiers with features and price points, annual discount, and the rationale plus competitor comparison table." }
+    ]
+  }
+}

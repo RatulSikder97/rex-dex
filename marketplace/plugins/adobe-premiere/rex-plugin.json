@@ -1,0 +1,38 @@
+{
+  "id": "adobe-premiere",
+  "name": "Adobe Premiere Pro",
+  "version": "1.0.0",
+  "description": "Finish REX videos in Premiere Pro: open renders directly, or export an editable XML timeline with every scene as a marker.",
+  "author": "REX",
+  "icon": "Clapperboard",
+  "categories": [
+    "Connections",
+    "Video"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "adobe-premiere",
+        "name": "Adobe Premiere Pro",
+        "description": "Finish REX videos in Premiere Pro: open renders directly, or export an editable XML timeline with every scene as a marker.",
+        "icon": "Clapperboard",
+        "category": "video",
+        "departments": [
+          "video",
+          "content",
+          "marketing"
+        ],
+        "kind": "app",
+        "apps": [
+          "Adobe Premiere Pro"
+        ],
+        "actions": [
+          "open-media",
+          "export-fcpxml"
+        ],
+        "auth": "none",
+        "setupHint": "Requires Premiere Pro installed in /Applications. \u201cEdit in Premiere\u201d writes an XML timeline to media/exports and opens it (File \u25b8 Import if Premiere asks)."
+      }
+    ]
+  }
+}

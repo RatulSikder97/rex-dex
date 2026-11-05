@@ -1,0 +1,47 @@
+{
+  "id": "figma",
+  "name": "Figma",
+  "version": "1.0.0",
+  "description": "Design and Engineering read your Figma files: frames, components, variables and design tokens (and turn designs into code) through Figma's official MCP server.",
+  "author": "REX",
+  "icon": "Figma",
+  "categories": [
+    "Connections",
+    "Design"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "figma": {
+        "url": "https://mcp.figma.com/mcp",
+        "transport": "http",
+        "departments": [
+          "design",
+          "engineering",
+          "product",
+          "marketing"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "figma",
+        "name": "Figma",
+        "description": "Design and Engineering read your Figma files: frames, components, variables and design tokens (and turn designs into code) through Figma's official MCP server.",
+        "icon": "Figma",
+        "category": "design",
+        "departments": [
+          "design",
+          "engineering",
+          "product",
+          "marketing"
+        ],
+        "kind": "mcp",
+        "mcpServer": "figma",
+        "auth": "agent-oauth",
+        "docs": "https://help.figma.com/hc/en-us/articles/32132100833559",
+        "setupHint": "Figma only lets approved apps sign in, so Connect uses Claude Code's sign-in: it opens, choose \u201cfigma\u201d, and your browser opens Figma's authorize page. Approve, then come back."
+      }
+    ]
+  },
+  "homepage": "https://help.figma.com/hc/en-us/articles/32132100833559"
+}

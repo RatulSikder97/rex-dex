@@ -1,0 +1,43 @@
+{
+  "id": "supabase",
+  "name": "Supabase",
+  "version": "1.0.0",
+  "description": "Engineering queries and manages your Supabase projects: tables, migrations, logs and edge functions.",
+  "author": "REX",
+  "icon": "Database",
+  "categories": [
+    "Connections",
+    "Dev"
+  ],
+  "contributes": {
+    "mcpServers": {
+      "supabase": {
+        "url": "https://mcp.supabase.com/mcp",
+        "transport": "http",
+        "departments": [
+          "engineering",
+          "qa"
+        ]
+      }
+    },
+    "connections": [
+      {
+        "id": "supabase",
+        "name": "Supabase",
+        "description": "Engineering queries and manages your Supabase projects: tables, migrations, logs and edge functions.",
+        "icon": "Database",
+        "category": "dev",
+        "departments": [
+          "engineering",
+          "qa"
+        ],
+        "kind": "mcp",
+        "mcpServer": "supabase",
+        "auth": "oauth",
+        "docs": "https://supabase.com/docs/guides/getting-started/mcp",
+        "setupHint": "Click Connect: your browser opens Supabase's sign-in page. Approve REX, and you're connected; the departments' agents get Supabase's tools."
+      }
+    ]
+  },
+  "homepage": "https://supabase.com/docs/guides/getting-started/mcp"
+}

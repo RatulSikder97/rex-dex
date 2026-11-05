@@ -1,0 +1,35 @@
+{
+  "id": "adobe-illustrator",
+  "name": "Adobe Illustrator",
+  "version": "1.0.0",
+  "description": "Open REX vector graphics and exports in Illustrator.",
+  "author": "REX",
+  "icon": "PenTool",
+  "categories": [
+    "Connections",
+    "Design"
+  ],
+  "contributes": {
+    "connections": [
+      {
+        "id": "adobe-illustrator",
+        "name": "Adobe Illustrator",
+        "description": "Open REX vector graphics and exports in Illustrator.",
+        "icon": "PenTool",
+        "category": "design",
+        "departments": [
+          "design"
+        ],
+        "kind": "app",
+        "apps": [
+          "Adobe Illustrator"
+        ],
+        "actions": [
+          "open-media"
+        ],
+        "auth": "none",
+        "setupHint": "Requires Illustrator in /Applications."
+      }
+    ]
+  }
+}
